@@ -303,6 +303,7 @@ const fsSpace = `
   
 
 function init() {
+  
   canvasResize(canvas, gl);
 
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -789,7 +790,7 @@ function convert2Map(cords, multiplier = 1.0) {
 
 
 function calcballs() {
-  coords = [];
+  
   //for (s = 0; s < 2000; s++) {// this runs at 19fps ish
   for (s = 0; s < 2; s++) { // runs at more like 30 fps
     lat = (Math.random() * 240) - 120;
@@ -820,4 +821,14 @@ function render(now) {
 
 
 init();
+
+var myWorker = new Worker('worker.js');
+myWorker.onmessage = function(e) {
+  var lon = e.data[0];
+  var lat = e.data[1]
+  console.log('Message received from worker');
+  console.log("X: " + lon + +", Y: " + lat)
+  coords.push([lon, lat])
+}
+
 requestAnimationFrame(render);
