@@ -792,10 +792,10 @@ function convert2Map(cords, multiplier = 1.0) {
 function calcballs() {
   
   //for (s = 0; s < 2000; s++) {// this runs at 19fps ish
-  for (s = 0; s < 2; s++) { // runs at more like 30 fps
+  for (s = 0; s < 1500; s++) { // runs at more like 30 fps
     lat = (Math.random() * 240) - 120;
     lon = (Math.random() * 100) - 50;
-    //coords.push([lon, lat]); //LA
+    coords.push([lon, lat]); //LA
   }
 
 }
