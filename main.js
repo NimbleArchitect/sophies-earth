@@ -439,6 +439,46 @@ function drawScene(gl, programList, deltaTime=0.01) {
 
   }
 
+
+//start line draw for positions
+startpoint = [-46.332722, 168.954283];
+endpoint = [51.504739, -0.086558];
+//endpoint = [-46.332722, 168.954283];
+//startpoint = [51.504739, -0.086558];
+
+steps = 200
+
+console.clear()
+difx = (endpoint[0] - startpoint[0]) / steps
+dify = (endpoint[1] - startpoint[1]) / steps
+steppoint = [difx, dify];
+console.log("steppoint: " + steppoint);
+for (i = 0; i < steps; i++) {
+  spx = steppoint[0] * i;
+  spy = steppoint[1] * i;
+
+  var ballMatrix = mat4.create();
+  pos = convert2Map([startpoint[0] + spx, startpoint[1] + spy], 1.03);
+  mat4.translate( ballMatrix, worldTilt, pos);
+  mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
+
+  mat3.set(ambientLightMatrix, 
+    1.0, 0.0, 0.0,
+    Math.random() , Math.random(), Math.random(),
+    0.0, 0.0, 0.0);
+
+  m = mat4.create();
+  mvpMatrix = mat4.create();
+  mat4.multiply(m, viewMatrix, ballMatrix);
+  mat4.multiply(mvpMatrix, projectionMatrix, m);
+  drawPlanet(gl, programList[4], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix); 
+
+}
+console.log("startpoint " + startpoint[0]);
+console.log("endpoint " + endpoint[0]);
+thesepoints = 51.504739 -  -46.332722;
+console.log("calc " +  thesepoints);
+
 /////////////////////////////////////
   // //pink ball
   // ballMatrix = mat4.create();
@@ -808,7 +848,7 @@ function render(now) {
   const deltaTime = now - then;
   then = now;
 
-  calcballs();
+  //calcballs();
   drawScene(gl, programInfo, deltaTime);
 
   fps_time += deltaTime;
@@ -826,8 +866,8 @@ var myWorker = new Worker('pointsworker.js');
 myWorker.onmessage = function(e) {
   var lon = e.data[0];
   var lat = e.data[1]
-  console.log('Message received from worker');
-  console.log("X: " + lon + +", Y: " + lat)
+  //console.log('Message received from worker');
+  //console.log("X: " + lon + +", Y: " + lat)
   coords.push([lon, lat])
 }
 
