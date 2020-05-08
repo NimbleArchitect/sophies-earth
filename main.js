@@ -822,7 +822,7 @@ function render(now) {
 
 init();
 
-var myWorker = new Worker('worker.js');
+var myWorker = new Worker('pointsworker.js');
 myWorker.onmessage = function(e) {
   var lon = e.data[0];
   var lat = e.data[1]
