@@ -298,3 +298,33 @@ function plotSkybox(gl, prog) {
     }
 }
 
+
+function makepoint(v1, v2) {
+  var newV = [];
+  radius = 1.03;
+
+  newV[0] = v1[0] + v2[0];    // x
+  newV[1] = v1[1] + v2[1];    // y
+  newV[2] = v1[2] + v2[2];    // z
+  var scale = radius / Math.sqrt(newV[0]*newV[0] + newV[1]*newV[1] + newV[2]*newV[2]);
+  newV[0] *= scale;
+  newV[1] *= scale;
+  newV[2] *= scale;
+
+  return newV;
+}
+
+
+function convert2Map(cords, multiplier = 1.0) {
+  latitude = cords[0] + 0.15; // north / south - y
+  longitude = cords[1] + 90.15; // east / west - x
+  //console.log(PI)
+  lat = latitude * (PI / 180);
+  lon = longitude * (PI / 180);
+  
+  z = -multiplier * Math.cos(lat) * Math.cos(lon);
+  y = multiplier * Math.sin(lat);
+  x = -multiplier * Math.cos(lat) * Math.sin(lon);
+  
+  return [x, y, z];
+}

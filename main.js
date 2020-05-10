@@ -1,4 +1,5 @@
 const wireframe = false;
+const centralLocation = [51.504739, -0.086558];
 
 const PI = 3.141592653589793;
 
@@ -325,21 +326,6 @@ function init() {
 
 }
 
-function makepoint(v1, v2) {
-  var newV = [];
-  radius = 1.0;
-
-  newV[0] = v1[0] + v2[0];    // x
-  newV[1] = v1[1] + v2[1];    // y
-  newV[2] = v1[2] + v2[2];    // z
-  var scale = radius / Math.sqrt(newV[0]*newV[0] + newV[1]*newV[1] + newV[2]*newV[2]);
-  newV[0] *= scale;
-  newV[1] *= scale;
-  newV[2] *= scale;
-
-  return newV;
-}
-
 function drawScene(gl, programList, deltaTime=0.01) {
   gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
   gl.clearDepth(1.0);                 // Clear everything
@@ -431,73 +417,34 @@ function drawScene(gl, programList, deltaTime=0.01) {
   // coords.push([25.763439, -80.190282]); //florida
   // coords.push([34.521709, -120.481808]); //LA
 
-  c = coords.length;
+  //draw the lines
+  var lineCount = coords.length;
 
-  
-  for (i = 0; i < c; i++) {
-    var ballMatrix = mat4.create();
-    pos = convert2Map(coords[i]);
-    mat4.translate( ballMatrix, worldTilt, pos);
-    mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
+  for (l = 0; l < lineCount; l++) {
+    var linePoints = coords[l];
+    var pointCount = linePoints.length;
+    colourR = Math.random();
+    colourG = Math.random();
+    colourB = Math.random();
     
-    mat3.set(ambientLightMatrix, 
-      1.0, 0.0, 0.0,
-      Math.random() , Math.random(), Math.random(),
-      0.0, 0.0, 0.0);
+    for (i = 0; i < pointCount; i++) {
+      var ballMatrix = mat4.create();
+      mat4.translate( ballMatrix, worldTilt, linePoints[i]);
+      mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
+      
+      mat3.set(ambientLightMatrix, 
+        1.0, 0.0, 0.0,
+        colourR , colourG, colourB,
+        0.0, 0.0, 0.0);
 
-    m = mat4.create();
-    mvpMatrix = mat4.create();
-    mat4.multiply(m, viewMatrix, ballMatrix);
-    mat4.multiply(mvpMatrix, projectionMatrix, m);
-    drawPlanet(gl, programList[4], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
+      m = mat4.create();
+      mvpMatrix = mat4.create();
+      mat4.multiply(m, viewMatrix, ballMatrix);
+      mat4.multiply(mvpMatrix, projectionMatrix, m);
+      drawPlanet(gl, programList[4], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
 
+    }
   }
-
-
-  //start line draw for positions
-  startpoint = [-46.332722, 168.954283];
-  endpoint = [51.504739, -0.086558];
-  //endpoint = [-46.332722, 168.954283];
-  //startpoint = [51.504739, -0.086558];
-
-  steps = 300;
-
-  var nextVec = [];
-  startVec = convert2Map(startpoint);
-  endVec = convert2Map(endpoint);
-  currVec = startVec;
-
-  var diffVec = [];
-  diffVec[0] = (endVec[0] - startVec[0]) / steps;
-  diffVec[1] = (endVec[1] - startVec[1]) / steps;
-  diffVec[2] = (endVec[2] - startVec[2]) / steps;
-
-  for (i=1; i <= steps; i++) {
-    //calculate the next vector and store in nextVec
-    nextVec[0] = startVec[0] + (diffVec[0] * i);
-    nextVec[1] = startVec[1] + (diffVec[1] * i);
-    nextVec[2] = startVec[2] + (diffVec[2] * i);
-
-    pos = makepoint(currVec, nextVec);
-    currVec = nextVec;
-
-    ballMatrix = mat4.create();
-    mat4.translate( ballMatrix, worldTilt, pos);
-    //mat4.translate( ballMatrix, ballMatrix, [-1.0, 0.0, 0.0]);
-    mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
-
-    mat3.set(ambientLightMatrix, 
-      1.0, 0.0, 0.0,
-      1.0, 0.4, 1.0,
-      0.0, 0.0, 0.0);
-
-    m = mat4.create();
-    mvpMatrix = mat4.create();
-    mat4.multiply(m, viewMatrix, ballMatrix);
-    mat4.multiply(mvpMatrix, projectionMatrix, m);
-    drawPlanet(gl, programList[3], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)
-  }
-
 
   //draw moon
   viewMatrix = mat4.create();
@@ -805,31 +752,35 @@ function drawSkybox(gl, programInfo) {
 
 }
 
+function plotLine(startpoint, endpoint, ) {
+  var linePoints = [];
+  var nextVec = [];
+  var diffVec = [];
+  //start line draw for positions
+  // startpoint = [-46.332722, 168.954283];
+  // endpoint = [51.504739, -0.086558];
 
-function convert2Map(cords, multiplier = 1.0) {
-    latitude = cords[0] + 0.15; // north / south - y
-    longitude = cords[1] + 90.15; // east / west - x
-    //console.log(PI)
-    lat = latitude * (PI / 180);
-    lon = longitude * (PI / 180);
-    
-    z = -multiplier * Math.cos(lat) * Math.cos(lon);
-    y = multiplier * Math.sin(lat);
-    x = -multiplier * Math.cos(lat) * Math.sin(lon);
-    
-    return [x, y, z];
-}
+  steps = 300;
 
+  startVec = convert2Map(startpoint);
+  endVec = convert2Map(endpoint);
+  currVec = startVec;
 
-function calcballs() {
-  
-  //for (s = 0; s < 2000; s++) {// this runs at 19fps ish
-  for (s = 0; s < 1500; s++) { // runs at more like 30 fps
-    lat = (Math.random() * 240) - 120;
-    lon = (Math.random() * 100) - 50;
-    coords.push([lon, lat]); //LA
+  diffVec[0] = (endVec[0] - startVec[0]) / steps;
+  diffVec[1] = (endVec[1] - startVec[1]) / steps;
+  diffVec[2] = (endVec[2] - startVec[2]) / steps;
+
+  for (i=1; i <= steps; i++) {
+    //calculate the next vector and store in nextVec
+    nextVec[0] = startVec[0] + (diffVec[0] * i);
+    nextVec[1] = startVec[1] + (diffVec[1] * i);
+    nextVec[2] = startVec[2] + (diffVec[2] * i);
+
+    pos = makepoint(currVec, nextVec);
+    currVec = nextVec;
+    linePoints.push(pos);
   }
-
+  return linePoints;
 }
 
 
@@ -857,10 +808,11 @@ init();
 var myWorker = new Worker('pointsworker.js');
 myWorker.onmessage = function(e) {
   var lon = e.data[0];
-  var lat = e.data[1]
+  var lat = e.data[1];
   //console.log('Message received from worker');
   //console.log("X: " + lon + +", Y: " + lat)
-  coords.push([lon, lat])
+  line = plotLine([lon, lat], centralLocation);
+  coords.push(line);
 }
 
 requestAnimationFrame(render);
