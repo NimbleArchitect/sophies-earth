@@ -325,6 +325,20 @@ function init() {
 
 }
 
+function makepoint(v1, v2) {
+  var newV = [];
+  radius = 1.0;
+
+  newV[0] = v1[0] + v2[0];    // x
+  newV[1] = v1[1] + v2[1];    // y
+  newV[2] = v1[2] + v2[2];    // z
+  var scale = radius / Math.sqrt(newV[0]*newV[0] + newV[1]*newV[1] + newV[2]*newV[2]);
+  newV[0] *= scale;
+  newV[1] *= scale;
+  newV[2] *= scale;
+
+  return newV;
+}
 
 function drawScene(gl, programList, deltaTime=0.01) {
   gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
@@ -440,72 +454,50 @@ function drawScene(gl, programList, deltaTime=0.01) {
   }
 
 
-//start line draw for positions
-startpoint = [-46.332722, 168.954283];
-endpoint = [51.504739, -0.086558];
-//endpoint = [-46.332722, 168.954283];
-//startpoint = [51.504739, -0.086558];
+  //start line draw for positions
+  startpoint = [-46.332722, 168.954283];
+  endpoint = [51.504739, -0.086558];
+  //endpoint = [-46.332722, 168.954283];
+  //startpoint = [51.504739, -0.086558];
 
-steps = 200
+  steps = 300;
 
-console.clear()
-difx = (endpoint[0] - startpoint[0]) / steps
-dify = (endpoint[1] - startpoint[1]) / steps
-steppoint = [difx, dify];
-console.log("steppoint: " + steppoint);
-for (i = 0; i < steps; i++) {
-  spx = steppoint[0] * i;
-  spy = steppoint[1] * i;
+  var nextVec = [];
+  startVec = convert2Map(startpoint);
+  endVec = convert2Map(endpoint);
+  currVec = startVec;
 
-  var ballMatrix = mat4.create();
-  pos = convert2Map([startpoint[0] + spx, startpoint[1] + spy], 1.03);
-  mat4.translate( ballMatrix, worldTilt, pos);
-  mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
+  var diffVec = [];
+  diffVec[0] = (endVec[0] - startVec[0]) / steps;
+  diffVec[1] = (endVec[1] - startVec[1]) / steps;
+  diffVec[2] = (endVec[2] - startVec[2]) / steps;
 
-  mat3.set(ambientLightMatrix, 
-    1.0, 0.0, 0.0,
-    Math.random() , Math.random(), Math.random(),
-    0.0, 0.0, 0.0);
+  for (i=1; i <= steps; i++) {
+    //calculate the next vector and store in nextVec
+    nextVec[0] = startVec[0] + (diffVec[0] * i);
+    nextVec[1] = startVec[1] + (diffVec[1] * i);
+    nextVec[2] = startVec[2] + (diffVec[2] * i);
 
-  m = mat4.create();
-  mvpMatrix = mat4.create();
-  mat4.multiply(m, viewMatrix, ballMatrix);
-  mat4.multiply(mvpMatrix, projectionMatrix, m);
-  drawPlanet(gl, programList[4], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix); 
+    pos = makepoint(currVec, nextVec);
+    currVec = nextVec;
 
-}
-console.log("startpoint " + startpoint[0]);
-console.log("endpoint " + endpoint[0]);
-thesepoints = 51.504739 -  -46.332722;
-console.log("calc " +  thesepoints);
+    ballMatrix = mat4.create();
+    mat4.translate( ballMatrix, worldTilt, pos);
+    //mat4.translate( ballMatrix, ballMatrix, [-1.0, 0.0, 0.0]);
+    mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
 
-/////////////////////////////////////
-  // //pink ball
-  // ballMatrix = mat4.create();
-  // pos = convert2Map([51.504739, -0.086558]); //london - shard
-  // // pos = convert2Map([36.101764, 138.231323]); //japan
-  // // pos = convert2Map([8.322576, 77.569631]); //south india
-  // // pos = convert2Map([-46.332722, 168.954283]); //new zealand
-  // // pos = convert2Map([25.763439, -80.190282]); //florida
-  // // pos = convert2Map([34.521709, -120.481808]); //LA
-  // // pos = convert2Map([]);
-  // //console.log(pos);
-  // mat4.translate( ballMatrix, worldTilt, pos);
-  // //mat4.translate( ballMatrix, ballMatrix, [-1.0, 0.0, 0.0]);
-  // mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
+    mat3.set(ambientLightMatrix, 
+      1.0, 0.0, 0.0,
+      1.0, 0.4, 1.0,
+      0.0, 0.0, 0.0);
 
-  // mat3.set(ambientLightMatrix, 
-  //   1.0, 0.0, 0.0,
-  //   1.0, 0.4, 1.0,
-  //   0.0, 0.0, 0.0);
-  
-  // m = mat4.create();
-  // mvpMatrix = mat4.create();
-  // mat4.multiply(m, viewMatrix, ballMatrix);
-  // mat4.multiply(mvpMatrix, projectionMatrix, m);
-  // drawPlanet(gl, programList[3], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)
+    m = mat4.create();
+    mvpMatrix = mat4.create();
+    mat4.multiply(m, viewMatrix, ballMatrix);
+    mat4.multiply(mvpMatrix, projectionMatrix, m);
+    drawPlanet(gl, programList[3], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)
+  }
 
-/////////////////////////////////////
 
   //draw moon
   viewMatrix = mat4.create();
