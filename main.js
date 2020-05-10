@@ -760,29 +760,54 @@ function plotLine(startpoint, endpoint, ) {
   // startpoint = [-46.332722, 168.954283];
   // endpoint = [51.504739, -0.086558];
 
-  steps = 300;
+  steps = 100;
 
   startVec = convert2Map(startpoint);
   endVec = convert2Map(endpoint);
   currVec = startVec;
-
+  
   diffVec[0] = (endVec[0] - startVec[0]) / steps;
   diffVec[1] = (endVec[1] - startVec[1]) / steps;
   diffVec[2] = (endVec[2] - startVec[2]) / steps;
-
+  
   for (i=1; i <= steps; i++) {
     //calculate the next vector and store in nextVec
     nextVec[0] = startVec[0] + (diffVec[0] * i);
     nextVec[1] = startVec[1] + (diffVec[1] * i);
     nextVec[2] = startVec[2] + (diffVec[2] * i);
-
-    pos = makepoint(currVec, nextVec);
-    currVec = nextVec;
-    linePoints.push(pos);
+    //TODO: this is broke, checkgap dosent return correctly i think,
+    //  or it could be that the diff check below is broke 
+    diff = checkGap(currVec, nextVec, 0.00001);
+    //if (diff == true) {
+      pos = makepoint(currVec, nextVec);
+      linePoints.push(pos);
+      currVec = nextVec;
+    //}
   }
+  
+  console.log("vec1:" + startVec);
+  console.log("vec2:" + endVec);
+  console.log("arrayLen:" + linePoints.length);
+  
   return linePoints;
 }
 
+function checkGap(v1, v2, val) {
+
+  diffX = Math.abs(v1[0] - v2[0]);
+  diffY = Math.abs(v1[1] - v2[1]);
+  diffZ = Math.abs(v1[2] - v2[2]);
+
+  console.log("diffX:" + diffX+"/"+(diffX > val));
+  console.log("diffY:" + diffY+"/"+(diffY > val));
+  console.log("diffZ:" + diffZ+"/"+(diffZ > val));
+
+  if (diffX > val) {return true;}
+  if (diffY > val) {return true;}
+  if (diffZ > val) {return true;}
+  
+  return false;
+}
 
 var fps_time = 0.0;
 
