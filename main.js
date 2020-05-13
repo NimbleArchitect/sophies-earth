@@ -322,7 +322,7 @@ function init() {
   programInfo[2] = initAtmos(gl, [90, 90]);
   programInfo[3] = initPlanet(gl, [30, 30], 'moon.jpg', 'moon.jpg', '');
 
-  programInfo[4] = initPlanet(gl, [8, 8]);
+  programInfo[4] = initPlanet(gl, [4, 4]);
 
 }
 
@@ -406,7 +406,7 @@ function drawScene(gl, programList, deltaTime=0.01) {
 //////////////////////////////////////
 
   //draw green ball
-  var scalefactor = 0.015;
+  var scalefactor = 0.010;
 
   // coords = [];
   // coords.push([50.039246, -5.675544]); //cornwall
@@ -760,11 +760,15 @@ function plotLine(startpoint, endpoint, ) {
   // startpoint = [-46.332722, 168.954283];
   // endpoint = [51.504739, -0.086558];
 
-  steps = 100;
+  steps = 120;
 
   startVec = convert2Map(startpoint);
   endVec = convert2Map(endpoint);
   currVec = startVec;
+  
+  gap = checkGap(startVec, endVec);
+  steps = steps * (gap)
+  //console.log("steps: " + steps);
   
   diffVec[0] = (endVec[0] - startVec[0]) / steps;
   diffVec[1] = (endVec[1] - startVec[1]) / steps;
@@ -775,39 +779,39 @@ function plotLine(startpoint, endpoint, ) {
     nextVec[0] = startVec[0] + (diffVec[0] * i);
     nextVec[1] = startVec[1] + (diffVec[1] * i);
     nextVec[2] = startVec[2] + (diffVec[2] * i);
-    //TODO: this is broke, checkgap dosent return correctly i think,
-    //  or it could be that the diff check below is broke 
-    diff = checkGap(currVec, nextVec, 0.00001);
-    //if (diff == true) {
-      pos = makepoint(currVec, nextVec);
+    
+    pos = makepoint(currVec, nextVec);
+    //scan bewteen points and remove unused
+    if (linePoints.length >= 1) {
+      gap = checkGap(prevPoint, pos);
+      
+      //console.log("gap: " + (gap));
+      if (gap > 0.06) {
+        linePoints.push(pos);
+        prevPoint = pos;
+      }
+    } else {
       linePoints.push(pos);
-      currVec = nextVec;
-    //}
+      prevPoint = pos;
+    }
+    
+    //linePoints.push(pos);
+    currVec = nextVec;
   }
-  
-  console.log("vec1:" + startVec);
-  console.log("vec2:" + endVec);
+
+  //always add the endpoint :)
+  endVec = convert2Map(endpoint);
+  pos = makepoint(currVec, endVec);
+  linePoints.push(pos);
+
+  // console.log("vec1:" + startVec);
+  // console.log("vec2:" + endVec);
   console.log("arrayLen:" + linePoints.length);
   
   return linePoints;
 }
 
-function checkGap(v1, v2, val) {
 
-  diffX = Math.abs(v1[0] - v2[0]);
-  diffY = Math.abs(v1[1] - v2[1]);
-  diffZ = Math.abs(v1[2] - v2[2]);
-
-  console.log("diffX:" + diffX+"/"+(diffX > val));
-  console.log("diffY:" + diffY+"/"+(diffY > val));
-  console.log("diffZ:" + diffZ+"/"+(diffZ > val));
-
-  if (diffX > val) {return true;}
-  if (diffY > val) {return true;}
-  if (diffZ > val) {return true;}
-  
-  return false;
-}
 
 var fps_time = 0.0;
 
