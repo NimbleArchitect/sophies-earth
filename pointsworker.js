@@ -14,7 +14,7 @@ points.push([-46.332722, 168.954283]); //new zealand
 points.push([25.763439, -80.190282]); //florida
 points.push([34.521709, -120.481808]); //LA
 
-for (c=0; c<100; c++) {
+for (let c=0; c<10; c++) {
   long = Math.random() * 180 + 1;
   latt = Math.random() * 180 + 1;
   points.push([long - 90.0, latt - 90.0]);
@@ -23,7 +23,7 @@ for (c=0; c<100; c++) {
 
 const doSomething = async () => {
     for (const item of points) {
-      await sleep(1000)
+      await sleep(100)
       workerResult = points[currPoint]
       currPoint += 1
       postMessage(workerResult);

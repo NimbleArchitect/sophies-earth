@@ -1,5 +1,4 @@
 
-
 function canvasResize(canvas, gl) {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -16,7 +15,6 @@ function initShaderProgram(gl, vsSource, fsSource) {
   const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource, 'fragment');
 
   // Create the shader program
-
   const shaderProgram = gl.createProgram();
   gl.attachShader(shaderProgram, vertexShader);
   gl.attachShader(shaderProgram, fragmentShader);
@@ -121,6 +119,70 @@ function isPowerOf2(value) {
 }
 
 
+function initGlBuffers(gl, prog,
+                vertexPoints  = undefined,
+                normals       = undefined,
+                texturePoints = undefined,
+                vertexIndex   = undefined ) {
+  
+  let vertexPositionBuffer;
+  let indexBuffer;
+  let vertexNormalBuffer;
+  let textureCoordBuffer;
+  let indexData;
+
+  if (vertexPoints != undefined) {
+    // Convert and commit the vertex positions to the buffer object.
+    let vertexPositionData = new Float32Array(vertexPoints);
+    vertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertexPositionData, gl.STATIC_DRAW);
+  } else {
+    vertexPoints = undefined
+  }
+
+  if (vertexIndex != undefined) {
+    // Pass index buffer data to element array buffer.
+    indexData = new Uint16Array(vertexIndex);
+    indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexData, gl.STATIC_DRAW);
+  } else {
+    vertexIndex = undefined
+  }
+
+  if (normals != undefined) {
+    // Create buffer objects.
+    let normalData = new Float32Array(normals);
+    vertexNormalBuffer = gl.createBuffer();
+    // Write the normals to their buffer object.
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, normalData, gl.STATIC_DRAW);
+  } else {
+    normals = undefined
+  }
+
+  if (texturePoints != undefined) {
+    let textureCoordData = new Float32Array(texturePoints);
+    textureCoordBuffer = gl.createBuffer();
+    // Write the texture data to buffer object.
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, textureCoordData, gl.STATIC_DRAW);
+  } else {
+    texturePoints = undefined
+  }
+
+  
+  return {
+    position: vertexPositionBuffer,
+    normals: vertexNormalBuffer,
+    textureCoord: textureCoordBuffer,
+    indicies: indexBuffer,
+    indexlen: indexData.length
+  }
+}
+
+
 function plotSphere(gl, prog, bands=[10,10]) {
   let latitudeBands = bands[0];
   let longitudeBands = bands[1];
@@ -130,15 +192,15 @@ function plotSphere(gl, prog, bands=[10,10]) {
   let normalData = [];
   let textureCoordData = [];
   let indexData = [];
-
+  
   // Calculate sphere vertex positions, normals, and texture coordinates.
   for (let latNumber = 0; latNumber <= latitudeBands; ++latNumber) {
-    let theta = latNumber * Math.PI / latitudeBands;
+    let theta = latNumber * PI / latitudeBands;
     let sinTheta = Math.sin(theta);
     let cosTheta = Math.cos(theta);
 
     for (let longNumber = 0; longNumber <= longitudeBands; ++longNumber) {
-      let phi = longNumber * 2 * Math.PI / longitudeBands;
+      let phi = longNumber * 2 * PI / longitudeBands;
       let sinPhi = Math.sin(phi);
       let cosPhi = Math.cos(phi);
 
@@ -178,130 +240,137 @@ function plotSphere(gl, prog, bands=[10,10]) {
     }
   }
 
-  vertexPositionData = new Float32Array(vertexPositionData);
-  normalData = new Float32Array(normalData);
-  textureCoordData = new Float32Array(textureCoordData);
-  indexData = new Uint16Array(indexData);
+  bufferPoints = initGlBuffers(gl, prog, vertexPositionData, normalData, textureCoordData, indexData)
   
-  // Create buffer objects.
-  let textureCoordBuffer = gl.createBuffer();
-  let vertexPositionBuffer = gl.createBuffer();
-  let vertexNormalBuffer = gl.createBuffer();
-  let indexBuffer = gl.createBuffer();
-  
-  // Write the texture data to buffer object.
-  gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, textureCoordData, gl.STATIC_DRAW);
-
   // Assign texturePosition
   let texturePosition = prog.attribLocations.texturePosition;
   gl.vertexAttribPointer(texturePosition, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(texturePosition);
-
-  // Write the vertex positions to their buffer object.
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, vertexPositionData, gl.STATIC_DRAW);
   
   // Assign position coords to attrib and enable it.
   let VertexPosition = prog.attribLocations.vertexPosition;
   gl.vertexAttribPointer(VertexPosition, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(VertexPosition);
   
-
-  // Write the normals to their buffer object.
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, normalData, gl.STATIC_DRAW);
-
   // Assign normal to attrib and enable it.
   let VertexNormal = prog.attribLocations.normalPosition;
   gl.vertexAttribPointer(VertexNormal, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(VertexNormal);
 
-  // Pass index buffer data to element array buffer.
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexData, gl.STATIC_DRAW);
   
-  
-  return {
-    position: vertexPositionBuffer,
-    normals: vertexNormalBuffer,
-    textureCoord: textureCoordBuffer,
-    indicies: indexBuffer,
-    indexlen: indexData.length
-  }
+  return bufferPoints
 }
 
-
+//draws a square that never moves
 function plotSkybox(gl, prog) {
+  let vertexPositionData = [];
+  let textureCoordData = [];
+  let indexData = [];
 
-    var vertexPositionData = [];
-    var textureCoordData = [];
-    var indexData = [];
+  let vertexPositionData = [  
+     1.0,  1.0, 1.0,  // top right
+     1.0, -1.0, 1.0,  // bottom right
+    -1.0, -1.0, 1.0,  // bottom left
+    -1.0,  1.0, 1.0   // top left 
+  ];
 
-    var vertexPositionData = [  
-         1.0,  1.0, 1.0,  // top right
-         1.0, -1.0, 1.0,  // bottom right
-        -1.0, -1.0, 1.0,  // bottom left
-        -1.0,  1.0, 1.0   // top left 
-    ];
+  let indexData = [
+    0, 1, 3,   // first triangle
+    1, 2, 3    // second triangle
+  ];
 
-     var indexData = [
-        0, 1, 3,   // first triangle
-        1, 2, 3    // second triangle
-    ];
+  let textureCoordData = [
+    1.0, 1.0,
+    1.0, 0.0,
+    0.0, 0.0,
+    0.0, 1.0
+  ];
+  
+  bufferPoints = initGlBuffers(gl, prog, vertexPositionData, undefined, textureCoordData, indexData)
 
-    var textureCoordData = [
-        1.0, 1.0,
-        1.0, 0.0,
-        0.0, 0.0,
-        0.0, 1.0
-    ];
-    
-
-    vertexPositionData = new Float32Array(vertexPositionData);
-    textureCoordData = new Float32Array(textureCoordData);
-    indexData = new Uint16Array(indexData);
-    
-    // Create buffer objects.
-    let textureCoordBuffer = gl.createBuffer();
-    let vertexPositionBuffer = gl.createBuffer();
-    let indexBuffer = gl.createBuffer();
-    
-    // Write the texture data to buffer object.
-    gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, textureCoordData, gl.STATIC_DRAW);
-
-    // Assign texturePosition
-    let texturePosition = prog.attribLocations.texturePosition;
-    gl.vertexAttribPointer(texturePosition, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(texturePosition);
-
-    // Write the vertex positions to their buffer object.
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertexPositionData, gl.STATIC_DRAW);
-    
-    // Assign position coords to attrib and enable it.
-    let VertexPosition = prog.attribLocations.vertexPosition;
-    gl.vertexAttribPointer(VertexPosition, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(VertexPosition);
-    
-
-    // Pass index buffer data to element array buffer.
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexData, gl.STATIC_DRAW);
-    
-    return {
-        position: vertexPositionBuffer,
-        textureCoord: textureCoordBuffer,
-        indicies: indexBuffer,
-        indexlen: indexData.length
-    }
+  // Assign texturePosition
+  let texturePosition = prog.attribLocations.texturePosition;
+  gl.vertexAttribPointer(texturePosition, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(texturePosition);
+  
+  // Assign position coords to attrib and enable it.
+  let VertexPosition = prog.attribLocations.vertexPosition;
+  gl.vertexAttribPointer(VertexPosition, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(VertexPosition);
+  
+  return bufferPoints;
 }
 
 
-function makepoint(v1, v2) {
+function plotTube(gl, prog) {
+  var vertexPositionData = [];
+  var textureCoordData = [];
+  var indexData = [];
+
+  var vertexPositionData = [  
+     0.25,  1.0,  0.25,  // 0 top right front
+     0.25,  0.0,  0.25,  // 1 bottom right front
+    -0.25,  0.0,  0.25,  // 2 bottom left front
+    -0.25,  1.0,  0.25,  // 3 top left front
+
+    -0.25,  1.0, -0.25,  // 4 top back left
+    -0.25,  0.0, -0.25,  // 5 bottom back left
+
+     0.25,  1.0,  -0.25,   // 6 top right back
+     0.25,  0.0,  -0.25,   // 7 bottom right back
+    -0.25,  0.0,  -0.25,   // 8 bottom left back
+    -0.25,  1.0,  -0.25,   // 9 top left back
+
+     0.5,  1.0, -0.5,  // 10 top back right
+     0.5,  0.0, -0.5,  // 11 bottom back right
+  ];
+
+  var indexData = [
+    0, 1, 3,   // first triangle front
+    1, 2, 3,   // second triangle front
+    3, 2, 4,   // first triangle left
+    4, 2, 5,
+    6, 7, 9,
+    7, 8, 9,
+    6, 7, 0,
+    7, 1, 0
+  ];
+
+  var textureCoordData = [
+    1.0, 1.0,
+    1.0, 0.0,
+    0.0, 0.0,
+    0.0, 1.0,
+    0.0, 0.0, 
+    1.0, 1.0,
+    0.0, 0.0,
+    0.0, 0.0, 
+    0.0, 0.0,
+    1.0, 0.0,
+    0.0, 0.0,
+    0.0, 0.0
+  ];
+  
+  bufferPoints = initGlBuffers(gl, prog, vertexPositionData, undefined, textureCoordData, indexData)
+  
+  // Assign texturePosition
+  let texturePosition = prog.attribLocations.texturePosition;
+  gl.vertexAttribPointer(texturePosition, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(texturePosition);
+  
+  // Assign position coords to attrib and enable it.
+  let VertexPosition = prog.attribLocations.vertexPosition;
+  gl.vertexAttribPointer(VertexPosition, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(VertexPosition);
+  
+  return bufferPoints;
+}
+
+
+//given two vectors calculate the outside edge of the circle
+// and return the new position, radius is the distance from 0,0,0
+function movePoint2Sphere(v1, v2, radius = 1.03) {
   var newV = [];
-  radius = 1.03;
 
   newV[0] = v1[0] + v2[0];    // x
   newV[1] = v1[1] + v2[1];    // y
@@ -315,6 +384,8 @@ function makepoint(v1, v2) {
 }
 
 
+//calculate and return the largest distance between two vectors
+// returns the largest x, y or z
 function checkGap(v1, v2, val) {
   //is gap big enough
   diffX = Math.abs(v1[0] - v2[0]);
@@ -334,6 +405,7 @@ function checkGap(v1, v2, val) {
 }
 
 
+//given longituide and lattitude return a 3d position
 function convert2Map(cords, multiplier = 1.0) {
   latitude = cords[0] + 0.15; // north / south - y
   longitude = cords[1] + 90.15; // east / west - x

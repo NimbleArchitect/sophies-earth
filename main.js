@@ -1,26 +1,27 @@
 const wireframe = false;
 const centralLocation = [51.504739, -0.086558];
 
-const PI = 3.141592653589793;
+//const PI = 3.141592653589793;
+const PI = Math.PI;
 
 const mat4 = glMatrix.mat4;
 const mat3 = glMatrix.mat3;
 const vec3 = glMatrix.vec3;
 
-var programInfo = [];
-var projection = 0;
+let programInfo = [];
+let projection = 0;
 
-var then = 0;
-var now = 0;
+let then = 0;
+let now = 0;
 
-var canvas = document.getElementById('glcanvas');
-var gl = canvas.getContext('webgl2');
+let canvas = document.getElementById('glcanvas');
+let gl = canvas.getContext('webgl2');
 
-var angle = 0.00;
-var angle = 4.391068816258958;
-var rotangle = 0.0;
+let angle = 0.00;
+    angle = 4.391068816258958;
+let rotangle = 0.0;
 
-var coords = [];
+let coords = [];
 
 
 
@@ -315,7 +316,7 @@ function init() {
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
   projection = mat4.create();
-  mat4.perspective(projection, Math.PI/6, 1.0, 0.1, 100.0);
+  mat4.perspective(projection, PI/6, 1.0, 0.1, 100.0);
 
   programInfo[0] = initSkybox(gl, 'space.jpg');
   programInfo[1] = initPlanet(gl, [90, 90], 'earth.jpg', 'night.jpg', '');
@@ -323,6 +324,7 @@ function init() {
   programInfo[3] = initPlanet(gl, [30, 30], 'moon.jpg', 'moon.jpg', '');
 
   programInfo[4] = initPlanet(gl, [4, 4]);
+  programInfo[5] = initTube(gl);
 
 }
 
@@ -337,13 +339,13 @@ function drawScene(gl, programList, deltaTime=0.01) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   // Create a perspective matrix, a special matrix that is  
-  const fieldOfView = 45 * Math.PI / 180;   // in radians
+  const fieldOfView = 45 * PI / 180;   // in radians
   const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
   const projectionMatrix = mat4.create();
   //const spinspeed = 0.00005;
   const spinspeed = 0.00005;
 
-  var ambientLightMatrix = mat3.create();
+  let ambientLightMatrix = mat3.create();
   mat3.set(ambientLightMatrix, 
           1.0, 0.0, 0.0, //brightness
           1.0, 1.0, 1.0, //light colour
@@ -351,9 +353,9 @@ function drawScene(gl, programList, deltaTime=0.01) {
 
   // note: glmatrix.js always has the first argument
   // as the destination to receive the result.
-  mat4.perspective(projectionMatrix, Math.PI/6, aspect, 0.1, 100.0);
+  mat4.perspective(projectionMatrix, PI/6, aspect, 0.1, 100.0);
   
-  var viewMatrix = mat4.create();
+  let viewMatrix = mat4.create();
   //mat4.targetTo(viewMatrix,
   mat4.lookAt(viewMatrix, 
     // [0, 2.0, -3.0], //[0, 2.5, -5],
@@ -384,8 +386,8 @@ function drawScene(gl, programList, deltaTime=0.01) {
   mat4.rotateZ(worldTilt, worldTilt, 0.15);
   mat4.rotateY(worldTilt, worldTilt, angle);
 
-  var m =  mat4.create();
-  var mvpMatrix = mat4.create();
+  let m =  mat4.create();
+  let mvpMatrix = mat4.create();
   mat4.multiply(m, viewMatrix, worldTilt);
   mat4.multiply(mvpMatrix, projectionMatrix, m);
   
@@ -406,7 +408,9 @@ function drawScene(gl, programList, deltaTime=0.01) {
 //////////////////////////////////////
 
   //draw green ball
-  var scalefactor = 0.010;
+  const scalefactor = 0.010;
+  //scalefactor = 0.050;
+  
 
   // coords = [];
   // coords.push([50.039246, -5.675544]); //cornwall
@@ -417,34 +421,41 @@ function drawScene(gl, programList, deltaTime=0.01) {
   // coords.push([25.763439, -80.190282]); //florida
   // coords.push([34.521709, -120.481808]); //LA
 
-  //draw the lines
-  var lineCount = coords.length;
+  //***********************************************
+  //***********************************************
 
-  for (l = 0; l < lineCount; l++) {
-    var linePoints = coords[l];
-    var pointCount = linePoints.length;
+  //draw the lines
+  let lineCount = coords.length;
+
+  for (let l = 0; l < lineCount; l++) {
+    let linePoints = coords[l];
+    let pointCount = linePoints.length;
     colourR = Math.random();
     colourG = Math.random();
     colourB = Math.random();
     
-    for (i = 0; i < pointCount; i++) {
-      var ballMatrix = mat4.create();
+    for (let i = 0; i < pointCount; i++) {
+      let ballMatrix = mat4.create();
       mat4.translate( ballMatrix, worldTilt, linePoints[i]);
       mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
       
       mat3.set(ambientLightMatrix, 
         1.0, 0.0, 0.0,
-        colourR , colourG, colourB,
+        1.0 , 0.0, 0.0, //color
         0.0, 0.0, 0.0);
 
       m = mat4.create();
       mvpMatrix = mat4.create();
       mat4.multiply(m, viewMatrix, ballMatrix);
       mat4.multiply(mvpMatrix, projectionMatrix, m);
-      drawPlanet(gl, programList[4], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
+      //drawPlanet(gl, programList[4], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
+      drawTube(gl, programList[5], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
 
     }
   }
+  //***********************************************
+  //***********************************************
+
 
   //draw moon
   viewMatrix = mat4.create();
@@ -477,10 +488,9 @@ function drawScene(gl, programList, deltaTime=0.01) {
 
 
 function initPlanet(gl, segments, img_day=undefined, img_night=undefined, img_normal=undefined) {
-
-  var thistexture = undefined;
-  var nighttexture = undefined;
-  var normalmap = undefined;
+  let thistexture = undefined;
+  let nighttexture = undefined;
+  let normalmap = undefined;
   
   if (img_day == undefined) { 
     thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
@@ -499,7 +509,7 @@ function initPlanet(gl, segments, img_day=undefined, img_night=undefined, img_no
   }
 
 
-  var shaderProgram = initShaderProgram(gl, vsPlanet, fsPlanet)
+  let shaderProgram = initShaderProgram(gl, vsPlanet, fsPlanet)
   thisprogram = {
     program: shaderProgram,
     attribLocations: {
@@ -527,10 +537,60 @@ function initPlanet(gl, segments, img_day=undefined, img_night=undefined, img_no
 }
 
 
+function initTube(gl, img_day=undefined, img_night=undefined, img_normal=undefined) {
+
+  let thistexture = undefined;
+  let nighttexture = undefined;
+  let normalmap = undefined;
+  
+  if (img_day == undefined) { 
+    thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
+  } else {
+    thistexture = loadTexture(gl, img_day, true);
+  }
+  if (img_night == undefined) { 
+    thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
+  } else {
+    nighttexture = loadTexture(gl, img_night, true);
+  }
+  if (img_normal == undefined) { 
+    thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
+  } else {
+    normalmap = loadTexture(gl, img_normal, true); 
+  }
+
+
+  let shaderProgram = initShaderProgram(gl, vsPlanet, fsPlanet)
+  thisprogram = {
+    program: shaderProgram,
+    attribLocations: {
+      vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+      normalPosition: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
+      textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+    },
+    uniformLocations: {
+      projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+      viewMatrix: gl.getUniformLocation(shaderProgram, 'uViewMatrix'),
+      modelMatrix: gl.getUniformLocation(shaderProgram, 'uModelMatrix'),
+      uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+      ambientLightMatrix: gl.getUniformLocation(shaderProgram, 'ambientLightMatrix'),
+
+      uNight: gl.getUniformLocation(shaderProgram, 'uNight'),
+      uNormal: gl.getUniformLocation(shaderProgram, 'uNormal'),
+    },
+  };  
+  thisprogram.buffers = plotTube(gl, thisprogram);
+  thisprogram.texture = thistexture;
+  thisprogram.textureNight = nighttexture;
+  thisprogram.textureNormal = normalmap;
+
+  return thisprogram;
+}
+
 function initAtmos(gl, segments, img_day=undefined, img_night=undefined) {
 
-  var thistexture = undefined;
-  var nighttexture = undefined;
+  let thistexture = undefined;
+  let nighttexture = undefined;
   
   if (img_day == undefined) { 
     thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
@@ -544,7 +604,7 @@ function initAtmos(gl, segments, img_day=undefined, img_night=undefined) {
   }
 
 
-  var shaderProgram = initShaderProgram(gl, vsPlanetAtmos, fsPlanetAtmos)
+  let shaderProgram = initShaderProgram(gl, vsPlanetAtmos, fsPlanetAtmos)
   thisprogram = {
     program: shaderProgram,
     attribLocations: {
@@ -572,9 +632,9 @@ function initAtmos(gl, segments, img_day=undefined, img_night=undefined) {
 
 function initSkybox(gl, img_background) {
   
-  var thistexture = loadTexture(gl, img_background, true);
+  let thistexture = loadTexture(gl, img_background, true);
+  let shaderProgram = initShaderProgram(gl, vsSpace, fsSpace)
 
-  var shaderProgram = initShaderProgram(gl, vsSpace, fsSpace)
   thisprogram = {
     program: shaderProgram,
     attribLocations: {
@@ -698,15 +758,118 @@ function drawPlanet(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambient
 }
 
 
-function drawSkybox(gl, programInfo) {
-  gl.disable(gl.DEPTH_TEST);
-  const numComponents = 3;  // pull out 2 values per iteration
+function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLightMatrix) {
+  // Tell WebGL how to pull out the positions from the position
+  // buffer into the vertexPosition attribute.
+  const numComponents = 3;  // pull out 3 values per iteration
   const type = gl.FLOAT;    // the data in the buffer is 32bit floats
   const normalize = false;  // don't normalize
   const stride = 0;         // how many bytes to get from one set of values to the next
                             // 0 = use type and numComponents above
   const offset = 0;         // how many bytes inside the buffer to start from
 
+  // Tell WebGL to use our program when drawing
+  gl.useProgram(programInfo.program);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.textureCoord);
+  gl.vertexAttribPointer(
+    programInfo.attribLocations.textureCoord,
+    2,
+    type,
+    normalize,
+    stride,
+    offset);
+  gl.enableVertexAttribArray(
+      programInfo.attribLocations.textureCoord);
+
+  // Set vertice positions
+  gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.position);
+  gl.vertexAttribPointer(
+    programInfo.attribLocations.vertexPosition,
+    numComponents,
+    type,
+    normalize,
+    stride,
+    offset);
+  gl.enableVertexAttribArray(
+    programInfo.attribLocations.vertexPosition);
+    
+  if (typeof programInfo.buffers.normals !== 'undefined') {
+    //set normals
+    gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.normals);
+    gl.vertexAttribPointer(
+      programInfo.attribLocations.normalPosition,
+      numComponents,
+      type,
+      normalize,
+      stride,
+      offset);
+    gl.enableVertexAttribArray(
+      programInfo.attribLocations.normalPosition);
+  }
+      
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, programInfo.buffers.indicies);
+
+
+  gl.uniformMatrix4fv(
+    programInfo.uniformLocations.projectionMatrix,
+    false,
+    mvpMatrix); //mvp
+  gl.uniformMatrix4fv(
+    programInfo.uniformLocations.viewMatrix,
+    false,
+    viewMatrix);
+  gl.uniformMatrix4fv(
+    programInfo.uniformLocations.modelMatrix,
+    false,
+    modelMatrix);
+  gl.uniformMatrix3fv(
+    programInfo.uniformLocations.ambientLightMatrix,
+    false,
+    ambientLightMatrix);
+
+  // Tell WebGL we want to affect texture unit 0
+  gl.activeTexture(gl.TEXTURE0);
+  // Bind the texture to texture unit 0
+  gl.bindTexture(gl.TEXTURE_2D, programInfo.texture);
+  // Tell the shader we bound the texture to texture unit 0
+  gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+
+  if (typeof programInfo.textureNormal !== 'undefined') {
+    // Tell WebGL we want to affect texture unit 1
+    gl.activeTexture(gl.TEXTURE1);
+    // Bind the texture to texture unit 1
+    gl.bindTexture(gl.TEXTURE_2D, programInfo.textureNormal);
+    // Tell the shader we bound the texture to texture unit 1
+    gl.uniform1i(programInfo.uniformLocations.uNormal, 1);
+  }
+  
+   if (typeof programInfo.textureNight !== 'undefined') {
+    // Tell WebGL we want to affect texture unit 2
+    gl.activeTexture(gl.TEXTURE2);
+    // Bind the texture to texture unit 2
+    gl.bindTexture(gl.TEXTURE_2D, programInfo.textureNight);
+    // Tell the shader we bound the texture to texture unit 2
+    gl.uniform1i(programInfo.uniformLocations.uNight, 2);
+  }
+
+  if (wireframe == false) {
+    gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+  } else {
+    gl.drawElements(gl.LINES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+  }
+}
+
+
+function drawSkybox(gl, programInfo) {
+  const numComponents = 3;  // pull out 2 values per iteration
+  const type = gl.FLOAT;    // the data in the buffer is 32bit floats
+  const normalize = false;  // don't normalize
+  const stride = 0;         // how many bytes to get from one set of values to the next
+  // 0 = use type and numComponents above
+  const offset = 0;         // how many bytes inside the buffer to start from
+  
+  gl.disable(gl.DEPTH_TEST);
   // Tell WebGL to use our program when drawing
   gl.useProgram(programInfo.program);
 
@@ -752,46 +915,45 @@ function drawSkybox(gl, programInfo) {
 
 }
 
-function plotLine(startpoint, endpoint, ) {
-  var linePoints = [];
-  var nextVec = [];
-  var diffVec = [];
-  //start line draw for positions
-  // startpoint = [-46.332722, 168.954283];
-  // endpoint = [51.504739, -0.086558];
 
-  steps = 120;
+//calc a line between two points made from X segments and at least Y distance apart
+function plotLine(startpoint, endpoint, steps = 120, minDistance = 0.06) {
+  let linePoints = [];
+  let nextVec = [];
+  let diffVec = [];
 
+  if (minDistance <= 0.0) {
+    console.log("plotLine distance is too small");
+    return false;
+  }
   startVec = convert2Map(startpoint);
   endVec = convert2Map(endpoint);
   currVec = startVec;
-  
+
   gap = checkGap(startVec, endVec);
   steps = steps * (gap)
-  //console.log("steps: " + steps);
   
+  linePoints.push(startVec); //set the first start position
+  prevPoint = startVec;
+
+  //console.log("steps: " + steps);
   diffVec[0] = (endVec[0] - startVec[0]) / steps;
   diffVec[1] = (endVec[1] - startVec[1]) / steps;
   diffVec[2] = (endVec[2] - startVec[2]) / steps;
   
-  for (i=1; i <= steps; i++) {
+  for (let i=1; i <= steps; i++) {
     //calculate the next vector and store in nextVec
     nextVec[0] = startVec[0] + (diffVec[0] * i);
     nextVec[1] = startVec[1] + (diffVec[1] * i);
     nextVec[2] = startVec[2] + (diffVec[2] * i);
     
-    pos = makepoint(currVec, nextVec);
-    //scan bewteen points and remove unused
-    if (linePoints.length >= 1) {
-      gap = checkGap(prevPoint, pos);
-      
-      //console.log("gap: " + (gap));
-      if (gap > 0.06) {
-        linePoints.push(pos);
-        prevPoint = pos;
-      }
-    } else {
+    pos = movePoint2Sphere(currVec, nextVec);
+    //scan bewteen points and ignore point that are two close
+    gap = checkGap(prevPoint, pos);
+    //console.log("gap: " + (gap));
+    if (gap > minDistance) {
       linePoints.push(pos);
+      calcTubeCaps(prevPoint, pos);
       prevPoint = pos;
     }
     
@@ -801,7 +963,7 @@ function plotLine(startpoint, endpoint, ) {
 
   //always add the endpoint :)
   endVec = convert2Map(endpoint);
-  pos = makepoint(currVec, endVec);
+  pos = movePoint2Sphere(currVec, endVec);
   linePoints.push(pos);
 
   // console.log("vec1:" + startVec);
@@ -812,8 +974,71 @@ function plotLine(startpoint, endpoint, ) {
 }
 
 
+function calcTubeCaps(startPoint, endPoint) {
+  //draw x points of circle on x/z plane
+  let endCap = [  
+    1.0, 0.0, -1.0, //0 4 front right top
+    1.0, 0.0,  1.0, //1 5 back right top
+   -1.0, 0.0,  1.0, //2 6 back left top
+   -1.0, 0.0, -1.0  //3 7 front left top
+  ];
 
-var fps_time = 0.0;
+  let capTop = mat4.create();
+  let capBottom = mat4.create();
+
+  //rotate to point at pos
+  //mat4.rotate(cT, cT, 0.15);
+
+  //translate to position start/end Point
+  mat4.translate(capBottom, endCap, startPoint);
+  mat4.translate(capTop, endCap, endPoint);
+
+  capTop.concat(capBottom);
+
+  // 0   /|1
+  //    / |
+  //   /  |
+  //  /---|5
+  // 4
+
+  var indexData = [
+    0, 4, 7,
+    7, 3, 0,      //front face
+    3, 7, 6,      //left face
+    6, 2, 3,      //left face
+    2, 6, 5,      //back face
+    5, 1, 2,      //back face
+    1, 5, 4,
+    4, 0, 1
+  ];
+
+  var textureCoordData = [
+    1.0, 1.0,
+    1.0, 0.0,
+    0.0, 0.0,
+    0.0, 1.0,
+    0.0, 0.0, 
+    1.0, 1.0,
+    0.0, 0.0,
+    0.0, 0.0, 
+    0.0, 0.0,
+    1.0, 0.0,
+    0.0, 0.0,
+    0.0, 0.0
+  ];
+
+
+  //use point to mark triangle
+  return {
+    positions: capTop,
+    index: indexData,
+    textureCoord: textureCoordData,
+    indexlen: indexData.length
+  }
+}
+
+
+let fps_time = 0.0;
 
 function render(now) {
   now *= 0.001;  // convert to seconds
@@ -834,10 +1059,10 @@ function render(now) {
 
 init();
 
-var myWorker = new Worker('pointsworker.js');
+let myWorker = new Worker('pointsworker.js');
 myWorker.onmessage = function(e) {
-  var lon = e.data[0];
-  var lat = e.data[1];
+  let lon = e.data[0];
+  let lat = e.data[1];
   //console.log('Message received from worker');
   //console.log("X: " + lon + +", Y: " + lat)
   line = plotLine([lon, lat], centralLocation);
