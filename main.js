@@ -9,6 +9,7 @@ const mat3 = glMatrix.mat3;
 const vec3 = glMatrix.vec3;
 
 let programInfo = [];
+let lineProgram = [];
 let projection = 0;
 
 let then = 0;
@@ -18,10 +19,11 @@ let canvas = document.getElementById('glcanvas');
 let gl = canvas.getContext('webgl2');
 
 let angle = 0.00;
-    angle = 4.391068816258958;
+angle = 4.391068816258958;
 let rotangle = 0.0;
 
 let coords = [];
+let stillRunning = true;
 
 
 
@@ -323,8 +325,7 @@ function init() {
   programInfo[2] = initAtmos(gl, [90, 90]);
   programInfo[3] = initPlanet(gl, [30, 30], 'moon.jpg', 'moon.jpg', '');
 
-  programInfo[4] = initPlanet(gl, [4, 4]);
-  programInfo[5] = initTube(gl);
+  programInfo[4] = initPlanet(gl, [4, 4]); //points of the line
 
 }
 
@@ -425,37 +426,35 @@ function drawScene(gl, programList, deltaTime=0.01) {
   //***********************************************
 
   //draw the lines
-  let lineCount = coords.length;
+  let lineCount = lineProgram.length;
 
+//FIXME: line drawing is broken
+  
   for (let l = 0; l < lineCount; l++) {
-    let linePoints = coords[l];
-    let pointCount = linePoints.length;
-    colourR = Math.random();
-    colourG = Math.random();
-    colourB = Math.random();
+    let thisLine = lineProgram[l];
+    //console.log("thisLine: " + thisLine);
+    let ballMatrix = mat4.create();
+    mat4.translate( ballMatrix, ballMatrix, worldTilt);
+    //mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
     
-    for (let i = 0; i < pointCount; i++) {
-      let ballMatrix = mat4.create();
-      mat4.translate( ballMatrix, worldTilt, linePoints[i]);
-      mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
-      
-      mat3.set(ambientLightMatrix, 
-        1.0, 0.0, 0.0,
-        1.0 , 0.0, 0.0, //color
-        0.0, 0.0, 0.0);
+    mat3.set(ambientLightMatrix, 
+      1.0, 0.0, 0.0,
+      1.0 , 0.0, 0.0, //color
+      0.0, 0.0, 0.0);
 
-      m = mat4.create();
-      mvpMatrix = mat4.create();
-      mat4.multiply(m, viewMatrix, ballMatrix);
-      mat4.multiply(mvpMatrix, projectionMatrix, m);
-      //drawPlanet(gl, programList[4], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
-      drawTube(gl, programList[5], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
+    m = mat4.create();
+    mvpMatrix = mat4.create();
+    mat4.multiply(m, viewMatrix, ballMatrix);
+    mat4.multiply(mvpMatrix, projectionMatrix, m);
+    //drawPlanet(gl, programList[4], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
+    drawTube(gl, thisLine, mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
 
-    }
   }
   //***********************************************
   //***********************************************
-
+  // if (lineCount >=4) {
+  //   stillRunning = false;
+  // }
 
   //draw moon
   viewMatrix = mat4.create();
@@ -537,8 +536,9 @@ function initPlanet(gl, segments, img_day=undefined, img_night=undefined, img_no
 }
 
 
-function initTube(gl, img_day=undefined, img_night=undefined, img_normal=undefined) {
-
+function initTube(gl, coords, img_day=undefined, img_night=undefined, img_normal=undefined) {
+  let locStart = coords[0];
+  let locEnd = coords[1];
   let thistexture = undefined;
   let nighttexture = undefined;
   let normalmap = undefined;
@@ -579,13 +579,14 @@ function initTube(gl, img_day=undefined, img_night=undefined, img_normal=undefin
       uNormal: gl.getUniformLocation(shaderProgram, 'uNormal'),
     },
   };  
-  thisprogram.buffers = plotTube(gl, thisprogram);
+  thisprogram.buffers = plotTube(gl, thisprogram, locStart, locEnd);
   thisprogram.texture = thistexture;
   thisprogram.textureNight = nighttexture;
   thisprogram.textureNormal = normalmap;
 
   return thisprogram;
 }
+
 
 function initAtmos(gl, segments, img_day=undefined, img_night=undefined) {
 
@@ -854,7 +855,10 @@ function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLi
   }
 
   if (wireframe == false) {
-    gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+    //gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+    //drawElements(mode, count, type, offset);
+    //drawArrays(mode, first, count);
+    gl.drawArrays(gl.TRIANGLES, 0, programInfo.buffers.indexlen);
   } else {
     gl.drawElements(gl.LINES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
   }
@@ -917,10 +921,13 @@ function drawSkybox(gl, programInfo) {
 
 
 //calc a line between two points made from X segments and at least Y distance apart
-function plotLine(startpoint, endpoint, steps = 120, minDistance = 0.06) {
-  let linePoints = [];
+function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.06) {
   let nextVec = [];
   let diffVec = [];
+  let vertexPositionData = [];
+  let indexData = [];
+  let textureCoordData = [];
+  let tubeNumb = 0;
 
   if (minDistance <= 0.0) {
     console.log("plotLine distance is too small");
@@ -933,8 +940,7 @@ function plotLine(startpoint, endpoint, steps = 120, minDistance = 0.06) {
   gap = checkGap(startVec, endVec);
   steps = steps * (gap)
   
-  linePoints.push(startVec); //set the first start position
-  prevPoint = startVec;
+  prevPoint = startVec; //setting this now avoids the need for an if check inside the loop
 
   //console.log("steps: " + steps);
   diffVec[0] = (endVec[0] - startVec[0]) / steps;
@@ -952,65 +958,122 @@ function plotLine(startpoint, endpoint, steps = 120, minDistance = 0.06) {
     gap = checkGap(prevPoint, pos);
     //console.log("gap: " + (gap));
     if (gap > minDistance) {
-      linePoints.push(pos);
-      calcTubeCaps(prevPoint, pos);
+      //calc tube of triangles between 2 points
+      t = calcTubes(prevPoint, pos, tubeNumb);
       prevPoint = pos;
+      //merge the arrays
+      vertexPositionData = vertexPositionData.concat(t.positions);
+      indexData = indexData.concat(t.index);
+      textureCoordData = textureCoordData.concat(t.textureCoord);
+      //indexlength += t.indexlen;
+      tubeNumb += 1;
     }
-    
-    //linePoints.push(pos);
     currVec = nextVec;
   }
 
   //always add the endpoint :)
   endVec = convert2Map(endpoint);
   pos = movePoint2Sphere(currVec, endVec);
-  linePoints.push(pos);
+  t = calcTubes(prevPoint, pos, tubeNumb);
+  //merge the arrays
+  vertexPositionData = vertexPositionData.concat(t.positions);
+  indexData = indexData.concat(t.index);
+  textureCoordData = textureCoordData.concat(t.textureCoord)
+  //indexlength += t.indexlen;
 
   // console.log("vec1:" + startVec);
   // console.log("vec2:" + endVec);
-  console.log("arrayLen:" + linePoints.length);
+  //console.log(vertexPositionData);
+  bufferPoints = initGlBuffers(gl, prog, vertexPositionData, undefined, textureCoordData, indexData)
   
-  return linePoints;
+  // Assign texturePosition
+  let texturePosition = prog.attribLocations.texturePosition;
+  gl.vertexAttribPointer(texturePosition, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(texturePosition);
+  
+  // Assign position coords to attrib and enable it.
+  let VertexPosition = prog.attribLocations.vertexPosition;
+  gl.vertexAttribPointer(VertexPosition, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(VertexPosition);
+  
+  return bufferPoints;
 }
 
 
-function calcTubeCaps(startPoint, endPoint) {
+function calcTubes(startPoint, endPoint, tubeNumb = 0) {
+  let out = [];
+  let im = (3 * 8) * tubeNumb;
+
   //draw x points of circle on x/z plane
   let endCap = [  
-    1.0, 0.0, -1.0, //0 4 front right top
-    1.0, 0.0,  1.0, //1 5 back right top
-   -1.0, 0.0,  1.0, //2 6 back left top
-   -1.0, 0.0, -1.0  //3 7 front left top
+    0.5, 0.0, -0.5, //0 4 front right top
+    0.5, 0.0,  0.5, //1 5 back right top
+   -0.5, 0.0,  0.5, //2 6 back left top
+   -0.5, 0.0, -0.5 //3 7 front left top
   ];
 
-  let capTop = mat4.create();
-  let capBottom = mat4.create();
+  // let endCap = [
+  //   -1.0, 0.0, 0.0, //0 2 left
+  //    1.0, 0.0, 0.0, //1 3 right
+  // ];
 
+  let capTopPos = mat4.create();
+  let capBottomPos = mat4.create();
+  let endCapTop = Array.from(endCap);
+  let endCapBottom = Array.from(endCap);
+  
   //rotate to point at pos
   //mat4.rotate(cT, cT, 0.15);
 
   //translate to position start/end Point
-  mat4.translate(capBottom, endCap, startPoint);
-  mat4.translate(capTop, endCap, endPoint);
+  mat4.fromTranslation(capTopPos, endPoint);
+  mat4.fromTranslation(capBottomPos, startPoint);
 
-  capTop.concat(capBottom);
+  // a 	Array 		the array of vectors to iterate over
+  // stride 	Number 		Number of elements between the start of each vec3. If 0 assumes tightly packed
+  // offset 	Number 		Number of elements to skip at the beginning of the array
+  // count 	Number 		Number of vec3s to iterate over. If 0 iterates over entire array
+  // fn 	function 		Function to call for each vector in the array
+  // arg 	Object 	<optional>
+  //   additional argument to pass to fn
+
+  vec3.forEach(endCapTop, 3, 0, 0, vec3.transformMat4, capTopPos);
+  vec3.forEach(endCapBottom, 3, 0, 0, vec3.transformMat4, capBottomPos);
+
+  out = endCapTop//.concat(endCapBottom);
 
   // 0   /|1
   //    / |
   //   /  |
-  //  /---|5
-  // 4
+  //  /---|3
+  // 2
+  
+  // var indexData = [
+  //   0, 1, 2,
+  //   2, 1, 3
+  // ];
 
-  var indexData = [
-    0, 4, 7,
-    7, 3, 0,      //front face
-    3, 7, 6,      //left face
-    6, 2, 3,      //left face
-    2, 6, 5,      //back face
-    5, 1, 2,      //back face
-    1, 5, 4,
-    4, 0, 1
-  ];
+  // var indexData = [
+  //   0 + im, 4 + im, 7 + im,  //front face
+  //   7 + im, 3 + im, 0 + im,  //front face
+  //   3 + im, 7 + im, 6 + im,  //left face
+  //   6 + im, 2 + im, 3 + im,  //left face
+  //   2 + im, 6 + im, 5 + im,  //back face
+  //   5 + im, 1 + im, 2 + im,  //back face
+  //   1 + im, 5 + im, 4 + im,  //right face
+  //   4 + im, 0 + im, 1 + im   //right face
+  // ];
+
+  // var indexData = [
+  //   0, 4, 7,  //front face
+  //   7, 3, 0,  //front face
+  //   3, 7, 6,  //left face
+  //   6, 2, 3,  //left face
+  //   2, 6, 5,  //back face
+  //   5, 1, 2,  //back face
+  //   1, 5, 4,  //right face
+  //   4, 0, 1   //right face
+  // ];
 
   var textureCoordData = [
     1.0, 1.0,
@@ -1030,10 +1093,9 @@ function calcTubeCaps(startPoint, endPoint) {
 
   //use point to mark triangle
   return {
-    positions: capTop,
-    index: indexData,
+    positions: out,
+    //index: indexData,
     textureCoord: textureCoordData,
-    indexlen: indexData.length
   }
 }
 
@@ -1053,19 +1115,20 @@ function render(now) {
     document.getElementById("info").innerHTML = (1.0 / deltaTime) + "fps";
     fps_time = 0.0;
   }
-  requestAnimationFrame(render);
+
+  if (stillRunning == true) {
+    requestAnimationFrame(render);
+  }
 }
 
 
 init();
 
+
 let myWorker = new Worker('pointsworker.js');
 myWorker.onmessage = function(e) {
-  let lon = e.data[0];
-  let lat = e.data[1];
-  //console.log('Message received from worker');
-  //console.log("X: " + lon + +", Y: " + lat)
-  line = plotLine([lon, lat], centralLocation);
+  line = initTube(gl, [e.data, centralLocation]);
+  lineProgram.push(line);
   coords.push(line);
 }
 

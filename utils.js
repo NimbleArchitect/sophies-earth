@@ -138,7 +138,7 @@ function initGlBuffers(gl, prog,
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertexPositionData, gl.STATIC_DRAW);
   } else {
-    vertexPoints = undefined
+    vertexPoints = undefined;
   }
 
   if (vertexIndex != undefined) {
@@ -148,7 +148,8 @@ function initGlBuffers(gl, prog,
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexData, gl.STATIC_DRAW);
   } else {
-    vertexIndex = undefined
+    vertexIndex = undefined;
+    indexData = 0;
   }
 
   if (normals != undefined) {
@@ -159,7 +160,7 @@ function initGlBuffers(gl, prog,
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, normalData, gl.STATIC_DRAW);
   } else {
-    normals = undefined
+    normals = undefined;
   }
 
   if (texturePoints != undefined) {
@@ -169,7 +170,7 @@ function initGlBuffers(gl, prog,
     gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, textureCoordData, gl.STATIC_DRAW);
   } else {
-    texturePoints = undefined
+    texturePoints = undefined;
   }
 
   
@@ -267,19 +268,19 @@ function plotSkybox(gl, prog) {
   let textureCoordData = [];
   let indexData = [];
 
-  let vertexPositionData = [  
+  vertexPositionData = [  
      1.0,  1.0, 1.0,  // top right
      1.0, -1.0, 1.0,  // bottom right
     -1.0, -1.0, 1.0,  // bottom left
     -1.0,  1.0, 1.0   // top left 
   ];
 
-  let indexData = [
+  indexData = [
     0, 1, 3,   // first triangle
     1, 2, 3    // second triangle
   ];
 
-  let textureCoordData = [
+  textureCoordData = [
     1.0, 1.0,
     1.0, 0.0,
     0.0, 0.0,
@@ -302,12 +303,12 @@ function plotSkybox(gl, prog) {
 }
 
 
-function plotTube(gl, prog) {
-  var vertexPositionData = [];
-  var textureCoordData = [];
-  var indexData = [];
+function old_plotTube(gl, prog) {
+  let vertexPositionData = [];
+  let textureCoordData = [];
+  let indexData = [];
 
-  var vertexPositionData = [  
+  vertexPositionData = [  
      0.25,  1.0,  0.25,  // 0 top right front
      0.25,  0.0,  0.25,  // 1 bottom right front
     -0.25,  0.0,  0.25,  // 2 bottom left front
@@ -325,7 +326,7 @@ function plotTube(gl, prog) {
      0.5,  0.0, -0.5,  // 11 bottom back right
   ];
 
-  var indexData = [
+  indexData = [
     0, 1, 3,   // first triangle front
     1, 2, 3,   // second triangle front
     3, 2, 4,   // first triangle left
@@ -336,7 +337,7 @@ function plotTube(gl, prog) {
     7, 1, 0
   ];
 
-  var textureCoordData = [
+  textureCoordData = [
     1.0, 1.0,
     1.0, 0.0,
     0.0, 0.0,
@@ -370,12 +371,12 @@ function plotTube(gl, prog) {
 //given two vectors calculate the outside edge of the circle
 // and return the new position, radius is the distance from 0,0,0
 function movePoint2Sphere(v1, v2, radius = 1.03) {
-  var newV = [];
+  let newV = [];
 
   newV[0] = v1[0] + v2[0];    // x
   newV[1] = v1[1] + v2[1];    // y
   newV[2] = v1[2] + v2[2];    // z
-  var scale = radius / Math.sqrt(newV[0]*newV[0] + newV[1]*newV[1] + newV[2]*newV[2]);
+  let scale = radius / Math.sqrt(newV[0]*newV[0] + newV[1]*newV[1] + newV[2]*newV[2]);
   newV[0] *= scale;
   newV[1] *= scale;
   newV[2] *= scale;
