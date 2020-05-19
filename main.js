@@ -1,4 +1,4 @@
-const wireframe = false;
+let wireframe = false;
 const centralLocation = [51.504739, -0.086558];
 
 //const PI = 3.141592653589793;
@@ -25,7 +25,7 @@ let rotangle = 0.0;
 let coords = [];
 let stillRunning = true;
 
-
+let noMore = 0;
 
 const vsPlanet = `
   attribute vec3 aVertexPosition;
@@ -429,25 +429,23 @@ function drawScene(gl, programList, deltaTime=0.01) {
   let lineCount = lineProgram.length;
 
 //FIXME: line drawing is broken
-  
   for (let l = 0; l < lineCount; l++) {
     let thisLine = lineProgram[l];
     //console.log("thisLine: " + thisLine);
-    let ballMatrix = mat4.create();
-    mat4.translate( ballMatrix, ballMatrix, worldTilt);
+    // let ballMatrix = mat4.create();
+    //mat4.translate( ballMatrix, ballMatrix, worldTilt);
     //mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
-    
     mat3.set(ambientLightMatrix, 
       1.0, 0.0, 0.0,
       1.0 , 0.0, 0.0, //color
       0.0, 0.0, 0.0);
 
-    m = mat4.create();
-    mvpMatrix = mat4.create();
-    mat4.multiply(m, viewMatrix, ballMatrix);
-    mat4.multiply(mvpMatrix, projectionMatrix, m);
+    // m = mat4.create();
+    // mvpMatrix = mat4.create();
+    //mat4.multiply(m, viewMatrix, ballMatrix);
+    //mat4.multiply(mvpMatrix, projectionMatrix, m);
     //drawPlanet(gl, programList[4], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
-    drawTube(gl, thisLine, mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
+    drawTube(gl, thisLine, mvpMatrix, viewMatrix, worldTilt, ambientLightMatrix)  
 
   }
   //***********************************************
@@ -580,6 +578,7 @@ function initTube(gl, coords, img_day=undefined, img_night=undefined, img_normal
     },
   };  
   thisprogram.buffers = plotTube(gl, thisprogram, locStart, locEnd);
+  console.log("vertex count: " + thisprogram.buffers.indexlen);
   thisprogram.texture = thistexture;
   thisprogram.textureNight = nighttexture;
   thisprogram.textureNormal = normalmap;
@@ -772,16 +771,16 @@ function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLi
   // Tell WebGL to use our program when drawing
   gl.useProgram(programInfo.program);
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.textureCoord);
-  gl.vertexAttribPointer(
-    programInfo.attribLocations.textureCoord,
-    2,
-    type,
-    normalize,
-    stride,
-    offset);
-  gl.enableVertexAttribArray(
-      programInfo.attribLocations.textureCoord);
+  // gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.textureCoord);
+  // gl.vertexAttribPointer(
+  //   programInfo.attribLocations.textureCoord,
+  //   2,
+  //   type,
+  //   normalize,
+  //   stride,
+  //   offset);
+  // gl.enableVertexAttribArray(
+  //     programInfo.attribLocations.textureCoord);
 
   // Set vertice positions
   gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.position);
@@ -795,21 +794,21 @@ function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLi
   gl.enableVertexAttribArray(
     programInfo.attribLocations.vertexPosition);
     
-  if (typeof programInfo.buffers.normals !== 'undefined') {
-    //set normals
-    gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.normals);
-    gl.vertexAttribPointer(
-      programInfo.attribLocations.normalPosition,
-      numComponents,
-      type,
-      normalize,
-      stride,
-      offset);
-    gl.enableVertexAttribArray(
-      programInfo.attribLocations.normalPosition);
-  }
+  // if (typeof programInfo.buffers.normals !== 'undefined') {
+  //   //set normals
+  //   gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.normals);
+  //   gl.vertexAttribPointer(
+  //     programInfo.attribLocations.normalPosition,
+  //     numComponents,
+  //     type,
+  //     normalize,
+  //     stride,
+  //     offset);
+  //   gl.enableVertexAttribArray(
+  //     programInfo.attribLocations.normalPosition);
+  // }
       
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, programInfo.buffers.indicies);
+  //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, programInfo.buffers.indicies);
 
 
   gl.uniformMatrix4fv(
@@ -836,31 +835,32 @@ function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLi
   // Tell the shader we bound the texture to texture unit 0
   gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
-  if (typeof programInfo.textureNormal !== 'undefined') {
-    // Tell WebGL we want to affect texture unit 1
-    gl.activeTexture(gl.TEXTURE1);
-    // Bind the texture to texture unit 1
-    gl.bindTexture(gl.TEXTURE_2D, programInfo.textureNormal);
-    // Tell the shader we bound the texture to texture unit 1
-    gl.uniform1i(programInfo.uniformLocations.uNormal, 1);
-  }
+  // if (typeof programInfo.textureNormal !== 'undefined') {
+  //   // Tell WebGL we want to affect texture unit 1
+  //   gl.activeTexture(gl.TEXTURE1);
+  //   // Bind the texture to texture unit 1
+  //   gl.bindTexture(gl.TEXTURE_2D, programInfo.textureNormal);
+  //   // Tell the shader we bound the texture to texture unit 1
+  //   gl.uniform1i(programInfo.uniformLocations.uNormal, 1);
+  // }
   
-   if (typeof programInfo.textureNight !== 'undefined') {
-    // Tell WebGL we want to affect texture unit 2
-    gl.activeTexture(gl.TEXTURE2);
-    // Bind the texture to texture unit 2
-    gl.bindTexture(gl.TEXTURE_2D, programInfo.textureNight);
-    // Tell the shader we bound the texture to texture unit 2
-    gl.uniform1i(programInfo.uniformLocations.uNight, 2);
-  }
-
+  //  if (typeof programInfo.textureNight !== 'undefined') {
+  //   // Tell WebGL we want to affect texture unit 2
+  //   gl.activeTexture(gl.TEXTURE2);
+  //   // Bind the texture to texture unit 2
+  //   gl.bindTexture(gl.TEXTURE_2D, programInfo.textureNight);
+  //   // Tell the shader we bound the texture to texture unit 2
+  //   gl.uniform1i(programInfo.uniformLocations.uNight, 2);
+  // }
+  
   if (wireframe == false) {
     //gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
     //drawElements(mode, count, type, offset);
     //drawArrays(mode, first, count);
     gl.drawArrays(gl.TRIANGLES, 0, programInfo.buffers.indexlen);
   } else {
-    gl.drawElements(gl.LINES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+   // gl.drawElements(gl.LINES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+   gl.drawArrays(gl.TRIANGLES, 0, programInfo.buffers.indexlen);
   }
 }
 
@@ -946,7 +946,7 @@ function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.0
   diffVec[0] = (endVec[0] - startVec[0]) / steps;
   diffVec[1] = (endVec[1] - startVec[1]) / steps;
   diffVec[2] = (endVec[2] - startVec[2]) / steps;
-  
+  let pointCounter = 1;
   for (let i=1; i <= steps; i++) {
     //calculate the next vector and store in nextVec
     nextVec[0] = startVec[0] + (diffVec[0] * i);
@@ -954,19 +954,17 @@ function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.0
     nextVec[2] = startVec[2] + (diffVec[2] * i);
     
     pos = movePoint2Sphere(currVec, nextVec);
-    //scan bewteen points and ignore point that are two close
+    //scan bewteen points and ignore points that are too close
     gap = checkGap(prevPoint, pos);
-    //console.log("gap: " + (gap));
     if (gap > minDistance) {
       //calc tube of triangles between 2 points
       t = calcTubes(prevPoint, pos, tubeNumb);
       prevPoint = pos;
       //merge the arrays
       vertexPositionData = vertexPositionData.concat(t.positions);
-      indexData = indexData.concat(t.index);
+      //indexData = indexData.concat(t.index);
       textureCoordData = textureCoordData.concat(t.textureCoord);
-      //indexlength += t.indexlen;
-      tubeNumb += 1;
+      pointCounter += 1;
     }
     currVec = nextVec;
   }
@@ -977,15 +975,12 @@ function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.0
   t = calcTubes(prevPoint, pos, tubeNumb);
   //merge the arrays
   vertexPositionData = vertexPositionData.concat(t.positions);
-  indexData = indexData.concat(t.index);
+  //indexData = indexData.concat(t.index);
   textureCoordData = textureCoordData.concat(t.textureCoord)
-  //indexlength += t.indexlen;
+  indexlength = vertexPositionData.length; //get number of triangles
 
-  // console.log("vec1:" + startVec);
-  // console.log("vec2:" + endVec);
-  //console.log(vertexPositionData);
-  bufferPoints = initGlBuffers(gl, prog, vertexPositionData, undefined, textureCoordData, indexData)
-  
+  bufferPoints = initGlBuffers(gl, prog, vertexPositionData, undefined, textureCoordData, undefined) 
+
   // Assign texturePosition
   let texturePosition = prog.attribLocations.texturePosition;
   gl.vertexAttribPointer(texturePosition, 3, gl.FLOAT, false, 0, 0);
@@ -996,26 +991,27 @@ function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.0
   gl.vertexAttribPointer(VertexPosition, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(VertexPosition);
   
+  bufferPoints.indexlen = indexlength/3/2;
   return bufferPoints;
 }
 
 
 function calcTubes(startPoint, endPoint, tubeNumb = 0) {
   let out = [];
-  let im = (3 * 8) * tubeNumb;
+  //let im = (3 * 8) * tubeNumb;
 
   //draw x points of circle on x/z plane
-  let endCap = [  
-    0.5, 0.0, -0.5, //0 4 front right top
-    0.5, 0.0,  0.5, //1 5 back right top
-   -0.5, 0.0,  0.5, //2 6 back left top
-   -0.5, 0.0, -0.5 //3 7 front left top
-  ];
-
-  // let endCap = [
-  //   -1.0, 0.0, 0.0, //0 2 left
-  //    1.0, 0.0, 0.0, //1 3 right
+  // let endCap = [  
+  //   0.5, 0.0, -0.5, //0 4 front right top
+  //   0.5, 0.0,  0.5, //1 5 back right top
+  //  -0.5, 0.0,  0.5, //2 6 back left top
+  //  -0.5, 0.0, -0.5 //3 7 front left top
   // ];
+
+  let endCap = [
+    -0.1, 0.0, 0.0, //0 2 left
+     0.1, 0.0, 0.0, //1 3 right
+  ];
 
   let capTopPos = mat4.create();
   let capBottomPos = mat4.create();
@@ -1040,13 +1036,39 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0) {
   vec3.forEach(endCapTop, 3, 0, 0, vec3.transformMat4, capTopPos);
   vec3.forEach(endCapBottom, 3, 0, 0, vec3.transformMat4, capBottomPos);
 
-  out = endCapTop//.concat(endCapBottom);
+  //bot left
+  out.push(endCapBottom[0]); //X
+  out.push(endCapBottom[1]); //Y
+  out.push(endCapBottom[2]); //Z
+  //top left
+  out.push(endCapTop[0]);
+  out.push(endCapTop[1]);
+  out.push(endCapTop[2]);
+  //top right
+  out.push(endCapTop[3]);
+  out.push(endCapTop[4]);
+  out.push(endCapTop[5]);
+  //bot right
+  out.push(endCapBottom[3]);
+  out.push(endCapBottom[4]);
+  out.push(endCapBottom[5]);
+  //top right
+  out.push(endCapTop[3]);
+  out.push(endCapTop[4]);
+  out.push(endCapTop[5]);
+  //top left
+  out.push(endCapBottom[0]);
+  out.push(endCapBottom[1]);
+  out.push(endCapBottom[2]);
+  
+
+  //out = endCapTop//.concat(endCapBottom);
 
   // 0   /|1
   //    / |
   //   /  |
-  //  /---|3
-  // 2
+  //  /---|1
+  // 0
   
   // var indexData = [
   //   0, 1, 2,
@@ -1079,22 +1101,12 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0) {
     1.0, 1.0,
     1.0, 0.0,
     0.0, 0.0,
-    0.0, 1.0,
-    0.0, 0.0, 
-    1.0, 1.0,
-    0.0, 0.0,
-    0.0, 0.0, 
-    0.0, 0.0,
-    1.0, 0.0,
-    0.0, 0.0,
-    0.0, 0.0
   ];
 
 
   //use point to mark triangle
   return {
     positions: out,
-    //index: indexData,
     textureCoord: textureCoordData,
   }
 }

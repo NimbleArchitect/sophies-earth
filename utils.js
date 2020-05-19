@@ -149,7 +149,7 @@ function initGlBuffers(gl, prog,
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexData, gl.STATIC_DRAW);
   } else {
     vertexIndex = undefined;
-    indexData = 0;
+    indexData = [];
   }
 
   if (normals != undefined) {
@@ -257,10 +257,10 @@ function plotSphere(gl, prog, bands=[10,10]) {
   let VertexNormal = prog.attribLocations.normalPosition;
   gl.vertexAttribPointer(VertexNormal, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(VertexNormal);
-
   
   return bufferPoints
 }
+
 
 //draws a square that never moves
 function plotSkybox(gl, prog) {
@@ -289,71 +289,6 @@ function plotSkybox(gl, prog) {
   
   bufferPoints = initGlBuffers(gl, prog, vertexPositionData, undefined, textureCoordData, indexData)
 
-  // Assign texturePosition
-  let texturePosition = prog.attribLocations.texturePosition;
-  gl.vertexAttribPointer(texturePosition, 3, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(texturePosition);
-  
-  // Assign position coords to attrib and enable it.
-  let VertexPosition = prog.attribLocations.vertexPosition;
-  gl.vertexAttribPointer(VertexPosition, 3, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(VertexPosition);
-  
-  return bufferPoints;
-}
-
-
-function old_plotTube(gl, prog) {
-  let vertexPositionData = [];
-  let textureCoordData = [];
-  let indexData = [];
-
-  vertexPositionData = [  
-     0.25,  1.0,  0.25,  // 0 top right front
-     0.25,  0.0,  0.25,  // 1 bottom right front
-    -0.25,  0.0,  0.25,  // 2 bottom left front
-    -0.25,  1.0,  0.25,  // 3 top left front
-
-    -0.25,  1.0, -0.25,  // 4 top back left
-    -0.25,  0.0, -0.25,  // 5 bottom back left
-
-     0.25,  1.0,  -0.25,   // 6 top right back
-     0.25,  0.0,  -0.25,   // 7 bottom right back
-    -0.25,  0.0,  -0.25,   // 8 bottom left back
-    -0.25,  1.0,  -0.25,   // 9 top left back
-
-     0.5,  1.0, -0.5,  // 10 top back right
-     0.5,  0.0, -0.5,  // 11 bottom back right
-  ];
-
-  indexData = [
-    0, 1, 3,   // first triangle front
-    1, 2, 3,   // second triangle front
-    3, 2, 4,   // first triangle left
-    4, 2, 5,
-    6, 7, 9,
-    7, 8, 9,
-    6, 7, 0,
-    7, 1, 0
-  ];
-
-  textureCoordData = [
-    1.0, 1.0,
-    1.0, 0.0,
-    0.0, 0.0,
-    0.0, 1.0,
-    0.0, 0.0, 
-    1.0, 1.0,
-    0.0, 0.0,
-    0.0, 0.0, 
-    0.0, 0.0,
-    1.0, 0.0,
-    0.0, 0.0,
-    0.0, 0.0
-  ];
-  
-  bufferPoints = initGlBuffers(gl, prog, vertexPositionData, undefined, textureCoordData, indexData)
-  
   // Assign texturePosition
   let texturePosition = prog.attribLocations.texturePosition;
   gl.vertexAttribPointer(texturePosition, 3, gl.FLOAT, false, 0, 0);
