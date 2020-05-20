@@ -828,12 +828,12 @@ function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLi
     false,
     ambientLightMatrix);
 
-  // Tell WebGL we want to affect texture unit 0
-  gl.activeTexture(gl.TEXTURE0);
-  // Bind the texture to texture unit 0
-  gl.bindTexture(gl.TEXTURE_2D, programInfo.texture);
-  // Tell the shader we bound the texture to texture unit 0
-  gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+  // // Tell WebGL we want to affect texture unit 0
+  // gl.activeTexture(gl.TEXTURE0);
+  // // Bind the texture to texture unit 0
+  // gl.bindTexture(gl.TEXTURE_2D, programInfo.texture);
+  // // Tell the shader we bound the texture to texture unit 0
+  // gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
   // if (typeof programInfo.textureNormal !== 'undefined') {
   //   // Tell WebGL we want to affect texture unit 1
@@ -991,7 +991,7 @@ function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.0
   gl.vertexAttribPointer(VertexPosition, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(VertexPosition);
   
-  bufferPoints.indexlen = indexlength/3/2;
+  bufferPoints.indexlen = indexlength/3;
   return bufferPoints;
 }
 
@@ -1009,8 +1009,8 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0) {
   // ];
 
   let endCap = [
-    -0.1, 0.0, 0.0, //0 2 left
-     0.1, 0.0, 0.0, //1 3 right
+    -0.01, 0.0, 0.0, //0 2 left
+     0.01, 0.0, 0.0, //1 3 right
   ];
 
   let capTopPos = mat4.create();
@@ -1024,14 +1024,6 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0) {
   //translate to position start/end Point
   mat4.fromTranslation(capTopPos, endPoint);
   mat4.fromTranslation(capBottomPos, startPoint);
-
-  // a 	Array 		the array of vectors to iterate over
-  // stride 	Number 		Number of elements between the start of each vec3. If 0 assumes tightly packed
-  // offset 	Number 		Number of elements to skip at the beginning of the array
-  // count 	Number 		Number of vec3s to iterate over. If 0 iterates over entire array
-  // fn 	function 		Function to call for each vector in the array
-  // arg 	Object 	<optional>
-  //   additional argument to pass to fn
 
   vec3.forEach(endCapTop, 3, 0, 0, vec3.transformMat4, capTopPos);
   vec3.forEach(endCapBottom, 3, 0, 0, vec3.transformMat4, capBottomPos);
