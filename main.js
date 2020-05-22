@@ -808,7 +808,7 @@ function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLi
   //     programInfo.attribLocations.normalPosition);
   // }
       
-  //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, programInfo.buffers.indicies);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, programInfo.buffers.indicies);
 
 
   gl.uniformMatrix4fv(
@@ -854,13 +854,13 @@ function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLi
   // }
   
   if (wireframe == false) {
-    //gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+    gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
     //drawElements(mode, count, type, offset);
     //drawArrays(mode, first, count);
-    gl.drawArrays(gl.TRIANGLES, 0, programInfo.buffers.indexlen);
+    //gl.drawArrays(gl.TRIANGLES, 0, programInfo.buffers.indexlen);
   } else {
-   // gl.drawElements(gl.LINES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
-   gl.drawArrays(gl.TRIANGLES, 0, programInfo.buffers.indexlen);
+    gl.drawElements(gl.LINES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+   //gl.drawArrays(gl.TRIANGLES, 0, programInfo.buffers.indexlen);
   }
 }
 
@@ -946,7 +946,7 @@ function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.0
   diffVec[0] = (endVec[0] - startVec[0]) / steps;
   diffVec[1] = (endVec[1] - startVec[1]) / steps;
   diffVec[2] = (endVec[2] - startVec[2]) / steps;
-  let pointCounter = 1;
+  //let pointCounter = 1;
   for (let i=1; i <= steps; i++) {
     //calculate the next vector and store in nextVec
     nextVec[0] = startVec[0] + (diffVec[0] * i);
@@ -959,12 +959,13 @@ function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.0
     if (gap > minDistance) {
       //calc tube of triangles between 2 points
       t = calcTubes(prevPoint, pos, tubeNumb);
+      tubeNumb += 1;
       prevPoint = pos;
       //merge the arrays
       vertexPositionData = vertexPositionData.concat(t.positions);
-      //indexData = indexData.concat(t.index);
+      indexData = indexData.concat(t.index);
       textureCoordData = textureCoordData.concat(t.textureCoord);
-      pointCounter += 1;
+      //pointCounter += 1;
     }
     currVec = nextVec;
   }
@@ -975,11 +976,11 @@ function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.0
   t = calcTubes(prevPoint, pos, tubeNumb);
   //merge the arrays
   vertexPositionData = vertexPositionData.concat(t.positions);
-  //indexData = indexData.concat(t.index);
-  textureCoordData = textureCoordData.concat(t.textureCoord)
-  indexlength = vertexPositionData.length; //get number of triangles
+  indexData = indexData.concat(t.index);
+  textureCoordData = textureCoordData.concat(t.textureCoord);
+  //indexlength = indexData.length; //get number of triangles
 
-  bufferPoints = initGlBuffers(gl, prog, vertexPositionData, undefined, textureCoordData, undefined) 
+  bufferPoints = initGlBuffers(gl, prog, vertexPositionData, undefined, textureCoordData, indexData);
 
   // Assign texturePosition
   let texturePosition = prog.attribLocations.texturePosition;
@@ -991,114 +992,101 @@ function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.0
   gl.vertexAttribPointer(VertexPosition, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(VertexPosition);
   
-  bufferPoints.indexlen = indexlength/3;
+  //bufferPoints.indexlen = indexlength/3;
   return bufferPoints;
 }
 
 
 function calcTubes(startPoint, endPoint, tubeNumb = 0) {
   let out = [];
-  //let im = (3 * 8) * tubeNumb;
+  let im = (8) * tubeNumb;
 
   //draw x points of circle on x/z plane
-  // let endCap = [  
-  //   0.5, 0.0, -0.5, //0 4 front right top
-  //   0.5, 0.0,  0.5, //1 5 back right top
-  //  -0.5, 0.0,  0.5, //2 6 back left top
-  //  -0.5, 0.0, -0.5 //3 7 front left top
-  // ];
-
-  let endCap = [
-    -0.01, 0.0, 0.0, //0 2 left
-     0.01, 0.0, 0.0, //1 3 right
+  
+  let endCap = [  
+    0.01, 0.0, -0.01, //0 4 front right top
+    0.01, 0.0,  0.01, //1 5 back right top
+   -0.01, 0.0,  0.01, //2 6 back left top
+   -0.01, 0.0, -0.01 //3 7 front left top
   ];
 
-  let capTopPos = mat4.create();
-  let capBottomPos = mat4.create();
-  let endCapTop = Array.from(endCap);
-  let endCapBottom = Array.from(endCap);
+  let matTopPos = mat4.create();
+  let matBottomPos = mat4.create();
+  let endCapTop = Array.from(endCap); //clone the array
+  let endCapBottom = Array.from(endCap); //clone again
   
   //rotate to point at pos
-  //mat4.rotate(cT, cT, 0.15);
-
+  let vecStart = vec3.create();
+  let vecEnd = vec3.create();
+  let up = vec3.create();
+  let tangent = vec3.create();
+  let forward = mat3.create();
+  let rotation = mat4.create();
+  
   //translate to position start/end Point
-  mat4.fromTranslation(capTopPos, endPoint);
-  mat4.fromTranslation(capBottomPos, startPoint);
+  mat4.fromTranslation(matTopPos, endPoint);
+  mat4.fromTranslation(matBottomPos, startPoint);
+  vec3.forEach(endCapTop, 3, 0, 0, vec3.transformMat4, matTopPos);
+  vec3.forEach(endCapBottom, 3, 0, 0, vec3.transformMat4, matBottomPos);
 
-  vec3.forEach(endCapTop, 3, 0, 0, vec3.transformMat4, capTopPos);
-  vec3.forEach(endCapBottom, 3, 0, 0, vec3.transformMat4, capBottomPos);
+  //rotate to face each other
+  vec3.fromValues(up, 0.0, 1.0, 0.0);
+  // vec3.fromValues(vecStart, matTopPos[0], matTopPos[1], matTopPos[2]); //obj1
+  // vec3.fromValues(vecEnd, matBottomPos[0], matBottomPos[1], matBottomPos[2]); //obj2
 
-  //bot left
-  out.push(endCapBottom[0]); //X
-  out.push(endCapBottom[1]); //Y
-  out.push(endCapBottom[2]); //Z
-  //top left
-  out.push(endCapTop[0]);
-  out.push(endCapTop[1]);
-  out.push(endCapTop[2]);
-  //top right
-  out.push(endCapTop[3]);
-  out.push(endCapTop[4]);
-  out.push(endCapTop[5]);
-  //bot right
-  out.push(endCapBottom[3]);
-  out.push(endCapBottom[4]);
-  out.push(endCapBottom[5]);
-  //top right
-  out.push(endCapTop[3]);
-  out.push(endCapTop[4]);
-  out.push(endCapTop[5]);
-  //top left
-  out.push(endCapBottom[0]);
-  out.push(endCapBottom[1]);
-  out.push(endCapBottom[2]);
-  
+  vec3.normalize(vecStart,endCapBottom);
+  vec3.subtract(forward, endCapTop, vecStart);
+  vec3.cross(tangent, forward, up);
 
-  //out = endCapTop//.concat(endCapBottom);
+  if (tangent.length < 0.000001) {
+    vec3.fromValues(up, 1.0, 0.0, 0.0);
+    vec3.cross(tangent, forward, up);
+  }
+  vec3.normalize(tangent, tangent);
+  vec3.cross(up, forward, tangent);
+  mat4.fromValues(rotation,
+    forward.x, up.x, tangent.x, 1.0,
+    forward.y, up.y, tangent.y, 1.0,
+    forward.z, up.z, tangent.z, 1.0
+  );
 
-  // 0   /|1
-  //    / |
-  //   /  |
-  //  /---|1
-  // 0
-  
-  // var indexData = [
-  //   0, 1, 2,
-  //   2, 1, 3
-  // ];
+  //vec3.forEach(endCapTop, 3, 0, 0, vec3.transformMat4, rotation);
+  //vec3.forEach(endCapBottom, 3, 0, 0, vec3.transformMat4, rotation);
 
-  // var indexData = [
-  //   0 + im, 4 + im, 7 + im,  //front face
-  //   7 + im, 3 + im, 0 + im,  //front face
-  //   3 + im, 7 + im, 6 + im,  //left face
-  //   6 + im, 2 + im, 3 + im,  //left face
-  //   2 + im, 6 + im, 5 + im,  //back face
-  //   5 + im, 1 + im, 2 + im,  //back face
-  //   1 + im, 5 + im, 4 + im,  //right face
-  //   4 + im, 0 + im, 1 + im   //right face
-  // ];
+  tubePoints = endCapBottom.concat(endCapTop);
+//  tubePoints = endCapTop.concat(endCapBottom);
 
-  // var indexData = [
-  //   0, 4, 7,  //front face
-  //   7, 3, 0,  //front face
-  //   3, 7, 6,  //left face
-  //   6, 2, 3,  //left face
-  //   2, 6, 5,  //back face
-  //   5, 1, 2,  //back face
-  //   1, 5, 4,  //right face
-  //   4, 0, 1   //right face
-  // ];
+  // front     |  left      |  back      |  right     |
+  // 7   /|4   |  6   /|7   |  6   /|5   |  4   /|6   |
+  //    / |    |     / |    |     / |    |     / |    |
+  //   /  |    |    /  |    |    /  |    |    /  |    |
+  //  /---|0   |   /---|3   |   /---|1   |   /---|2   |
+  // 3         |  2         |  2         |  0         |
 
-  var textureCoordData = [
-    1.0, 1.0,
-    1.0, 0.0,
-    0.0, 0.0,
+  var indexData = [
+    0 + im, 4 + im, 3 + im,  //front face
+    7 + im, 3 + im, 4 + im,  //front face
+    3 + im, 7 + im, 2 + im,  //left face
+    6 + im, 2 + im, 7 + im,  //left face
+    1 + im, 5 + im, 2 + im,  //back face
+    2 + im, 5 + im, 6 + im,  //back face
+    0 + im, 2 + im, 6 + im,  //right face
+    4 + im, 0 + im, 6 + im   //right face
   ];
+
+  //Disabled textures for now
+  var textureCoordData = [];
+  // var textureCoordData = [
+  //   1.0, 1.0,
+  //   1.0, 0.0,
+  //   0.0, 0.0,
+  // ];
 
 
   //use point to mark triangle
   return {
-    positions: out,
+    positions: tubePoints,
+    index: indexData,
     textureCoord: textureCoordData,
   }
 }
