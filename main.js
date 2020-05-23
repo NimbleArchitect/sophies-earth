@@ -413,31 +413,19 @@ function drawScene(gl, programList, deltaTime=0.01) {
   //scalefactor = 0.050;
   
 
-  // coords = [];
-  // coords.push([50.039246, -5.675544]); //cornwall
-  // coords.push([51.504739, -0.086558]); //london - the shard
-  // coords.push([36.101764, 138.231323]); //japan
-  // coords.push([8.322576, 77.569631]); //south india
-  // coords.push([-46.332722, 168.954283]); //new zealand
-  // coords.push([25.763439, -80.190282]); //florida
-  // coords.push([34.521709, -120.481808]); //LA
-
-  //***********************************************
-  //***********************************************
-
   //draw the lines
   let lineCount = lineProgram.length;
 
-//FIXME: line drawing is broken
+//FIXME: line drawing is almost working
   for (let l = 0; l < lineCount; l++) {
     let thisLine = lineProgram[l];
     //console.log("thisLine: " + thisLine);
-    // let ballMatrix = mat4.create();
-    //mat4.translate( ballMatrix, ballMatrix, worldTilt);
-    //mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
+    let ballMatrix = mat4.create();
+    mat4.scale(ballMatrix, ballMatrix, [0.005, 0.005, 0.005]);
+    mat4.translate(ballMatrix, ballMatrix, worldTilt);
     mat3.set(ambientLightMatrix, 
       1.0, 0.0, 0.0,
-      1.0 , 0.0, 0.0, //color
+      1.0 ,0.0, 0.0, //color
       0.0, 0.0, 0.0);
 
     // m = mat4.create();
@@ -445,7 +433,7 @@ function drawScene(gl, programList, deltaTime=0.01) {
     //mat4.multiply(m, viewMatrix, ballMatrix);
     //mat4.multiply(mvpMatrix, projectionMatrix, m);
     //drawPlanet(gl, programList[4], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
-    drawTube(gl, thisLine, mvpMatrix, viewMatrix, worldTilt, ambientLightMatrix)  
+    drawTube(gl, thisLine, mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
 
   }
   //***********************************************
@@ -853,15 +841,12 @@ function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLi
   //   gl.uniform1i(programInfo.uniformLocations.uNight, 2);
   // }
   
-  if (wireframe == false) {
-    gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
-    //drawElements(mode, count, type, offset);
-    //drawArrays(mode, first, count);
-    //gl.drawArrays(gl.TRIANGLES, 0, programInfo.buffers.indexlen);
-  } else {
-    gl.drawElements(gl.LINES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
-   //gl.drawArrays(gl.TRIANGLES, 0, programInfo.buffers.indexlen);
-  }
+  gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+  // if (wireframe == false) {
+  //   gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+  // } else {
+  //   gl.drawElements(gl.LINES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+  // }
 }
 
 
@@ -1012,49 +997,52 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0) {
 
   let matTopPos = mat4.create();
   let matBottomPos = mat4.create();
-  let endCapTop = Array.from(endCap); //clone the array
-  let endCapBottom = Array.from(endCap); //clone again
+  let arrCapTop = Array.from(endCap); //clone the array
+  let arrCapBottom = Array.from(endCap); //clone again
   
   //rotate to point at pos
   let vecStart = vec3.create();
   let vecEnd = vec3.create();
   let up = vec3.create();
   let tangent = vec3.create();
-  let forward = mat3.create();
+  let forward = vec3.create();
   let rotation = mat4.create();
   
-  //translate to position start/end Point
-  mat4.fromTranslation(matTopPos, endPoint);
-  mat4.fromTranslation(matBottomPos, startPoint);
-  vec3.forEach(endCapTop, 3, 0, 0, vec3.transformMat4, matTopPos);
-  vec3.forEach(endCapBottom, 3, 0, 0, vec3.transformMat4, matBottomPos);
-
-  //rotate to face each other
-  vec3.fromValues(up, 0.0, 1.0, 0.0);
-  // vec3.fromValues(vecStart, matTopPos[0], matTopPos[1], matTopPos[2]); //obj1
-  // vec3.fromValues(vecEnd, matBottomPos[0], matBottomPos[1], matBottomPos[2]); //obj2
-
-  vec3.normalize(vecStart,endCapBottom);
-  vec3.subtract(forward, endCapTop, vecStart);
+ 
+  vecStart = vec3.fromValues(startPoint[0], startPoint[1], startPoint[2]); //obj1
+  vecEnd = vec3.fromValues(endPoint[0], endPoint[1], endPoint[2]); //obj2
+  up = vec3.fromValues(0.0, 1.0, 0.0);
+  
+  //calculate rotation to face each other
+  vec3.subtract(forward, vecEnd, vecStart);
   vec3.cross(tangent, forward, up);
 
   if (tangent.length < 0.000001) {
-    vec3.fromValues(up, 1.0, 0.0, 0.0);
+    up = vec3.fromValues(1.0, 0.0, 0.0);
     vec3.cross(tangent, forward, up);
   }
   vec3.normalize(tangent, tangent);
   vec3.cross(up, forward, tangent);
-  mat4.fromValues(rotation,
-    forward.x, up.x, tangent.x, 1.0,
-    forward.y, up.y, tangent.y, 1.0,
-    forward.z, up.z, tangent.z, 1.0
+  rotation = mat4.fromValues(
+    forward[0], up[0], tangent[0], 1.0,
+    forward[1], up[1], tangent[1], 1.0,
+    forward[2], up[2], tangent[2], 1.0
   );
 
-  //vec3.forEach(endCapTop, 3, 0, 0, vec3.transformMat4, rotation);
-  //vec3.forEach(endCapBottom, 3, 0, 0, vec3.transformMat4, rotation);
+  //mat3.multiply(matTopPos, rotation, )
+  //vec3.transformMat3(vecStart, vecStart, rotation);
+  //vec3.transformMat3(vecEnd, vecEnd, rotation);
 
-  tubePoints = endCapBottom.concat(endCapTop);
-//  tubePoints = endCapTop.concat(endCapBottom);
+  //translate to position start/end Point
+  mat4.fromTranslation(matTopPos, vecEnd);
+  mat4.fromTranslation(matBottomPos, vecStart);
+  
+  vec3.forEach(arrCapTop, 3, 0, 0, vec3.transformMat4, matTopPos);
+  vec3.forEach(arrCapBottom, 3, 0, 0, vec3.transformMat4, matBottomPos);
+
+
+  tubePoints = arrCapBottom.concat(arrCapTop);
+//  tubePoints = vecCapTop.concat(arrCapBottom);
 
   // front     |  left      |  back      |  right     |
   // 7   /|4   |  6   /|7   |  6   /|5   |  4   /|6   |
