@@ -10,6 +10,7 @@ const vec3 = glMatrix.vec3;
 
 let programInfo = [];
 let lineProgram = [];
+let orbPosition = [];
 let projection = 0;
 
 let then = 0;
@@ -324,7 +325,7 @@ function init() {
   programInfo[1] = initPlanet(gl, [90, 90], 'earth.jpg', 'night.jpg', '');
   programInfo[2] = initAtmos(gl, [90, 90]);
   programInfo[3] = initPlanet(gl, [30, 30], 'moon.jpg', 'moon.jpg', '');
-
+  programInfo[4] = initPlanet(gl, [8, 8], undefined, undefined, undefined, 0.02);
 }
 
 function drawScene(gl, programList, deltaTime=0.01) {
@@ -368,11 +369,11 @@ function drawScene(gl, programList, deltaTime=0.01) {
   // set earth rotation
   angle = angle + (spinspeed / deltaTime);
   if (angle > 6.28319) {
-    angle = 0; console.log("earth reset");
+    angle = 0; //console.log("earth reset");
   }
   rotangle += ((spinspeed / 27) / deltaTime);
   if (rotangle > 6.28319) {
-    rotangle = 0.0; console.log("moon reset");
+    rotangle = 0.0; //console.log("moon reset");
   }
   
 
@@ -421,19 +422,54 @@ function drawScene(gl, programList, deltaTime=0.01) {
 
     const lineMatrix = mat4.create();
     mat4.translate( lineMatrix, lineMatrix, worldTilt);
-
-/////////////////////
+    
+    /////////////////////
     mat3.set(ambientLightMatrix, 
       1.0, 0.0, 0.0,
       1.0 ,0.0, 0.0, //color
       0.0, 0.0, 0.0);
+      
+    drawTube(gl, thisLine, mvpMatrix, viewMatrix, lineMatrix, ambientLightMatrix);
+      
+    let orbPoints = thisLine.buffers.orbPathPoints; //list of points for the orb position
+    let orbPos = orbPosition[l];
+    if (orbPos == undefined) {
+      //let op = orbPosition[l]
+      orbPos = 0;
+    } else {
+      orbPos += 1;
+      if (orbPoints.length <= orbPos) {
+        orbPos = 0;
+      }
+    }
+    pos = orbPoints[orbPos];
+    orbPosition[l] = orbPos;
 
-    // m = mat4.create();
-    // mvpMatrix = mat4.create();
-    //mat4.multiply(m, viewMatrix, ballMatrix);
-    //mat4.multiply(mvpMatrix, projectionMatrix, m);
-    //drawPlanet(gl, programList[4], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
-    drawTube(gl, thisLine, mvpMatrix, viewMatrix, lineMatrix, ambientLightMatrix)  
+    // ballMatrix = mat4.create();
+    // mat4.rotateZ(worldTilt, worldTilt, 0.15);
+    // mat4.rotateY(ballMatrix, ballMatrix, angle);
+    const ballMatrix = mat4.create();
+
+    //mat4.translate(ballMatrix, ballMatrix, [0.0, 0.0, 0.0]);
+    mat4.rotateZ(ballMatrix, ballMatrix, 0.15);
+    mat4.rotateY(ballMatrix, ballMatrix, angle);
+    mat4.translate(ballMatrix, ballMatrix, pos);
+    
+    //mat4.fromTranslation( ballMatrix, pos);
+    //mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
+    //mat4.multiply( ballMatrix, ballMatrix, worldTilt);
+    mat3.set(ambientLightMatrix, 
+      1.0, 0.0, 0.0,
+      //Math.random() , Math.random(), Math.random(),
+      0.0, 0.0, 0.9,
+      0.0, 0.0, 0.0);
+
+    mBall = mat4.create();
+    mvpBallMatrix = mat4.create();
+    mat4.multiply(mBall, viewMatrix, ballMatrix);
+    mat4.multiply(mvpBallMatrix, projectionMatrix, mBall);
+
+    drawPlanet(gl, programList[4], mvpBallMatrix, viewMatrix, ballMatrix, ambientLightMatrix)
 
   }
   //***********************************************
@@ -472,25 +508,25 @@ function drawScene(gl, programList, deltaTime=0.01) {
 
 
 
-function initPlanet(gl, segments, img_day=undefined, img_night=undefined, img_normal=undefined) {
+function initPlanet(gl, segments, img_day=undefined, img_night=undefined, img_normal=undefined, radius=1) {
   let thistexture = undefined;
   let nighttexture = undefined;
   let normalmap = undefined;
   
   if (img_day == undefined) { 
-    thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
+    thistexture = loadTexture(gl, undefined, [255,255,255,255]);
   } else {
-    thistexture = loadTexture(gl, img_day, true);
+    thistexture = loadTexture(gl, img_day);
   }
   if (img_night == undefined) { 
-    thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
+    thistexture = loadTexture(gl, undefined, [255,255,255,255]);
   } else {
-    nighttexture = loadTexture(gl, img_night, true);
+    nighttexture = loadTexture(gl, img_night);
   }
   if (img_normal == undefined) { 
-    thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
+    thistexture = loadTexture(gl, undefined, [255,255,255,255]);
   } else {
-    normalmap = loadTexture(gl, img_normal, true); 
+    normalmap = loadTexture(gl, img_normal); 
   }
 
 
@@ -513,7 +549,7 @@ function initPlanet(gl, segments, img_day=undefined, img_night=undefined, img_no
       uNormal: gl.getUniformLocation(shaderProgram, 'uNormal'),
     },
   };  
-  thisprogram.buffers = plotSphere(gl, thisprogram, segments);
+  thisprogram.buffers = plotSphere(gl, thisprogram, segments, radius);
   thisprogram.texture = thistexture;
   thisprogram.textureNight = nighttexture;
   thisprogram.textureNormal = normalmap;
@@ -530,19 +566,19 @@ function initTube(gl, coords, img_day=undefined, img_night=undefined, img_normal
   let normalmap = undefined;
   
   if (img_day == undefined) { 
-    thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
+    thistexture = loadTexture(gl, undefined, [255,255,255,255]);
   } else {
-    thistexture = loadTexture(gl, img_day, true);
+    thistexture = loadTexture(gl, img_day);
   }
   if (img_night == undefined) { 
-    thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
+    thistexture = loadTexture(gl, undefined, [255,255,255,255]);
   } else {
-    nighttexture = loadTexture(gl, img_night, true);
+    nighttexture = loadTexture(gl, img_night);
   }
   if (img_normal == undefined) { 
-    thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
+    thistexture = loadTexture(gl, undefined, [255,255,255,255]);
   } else {
-    normalmap = loadTexture(gl, img_normal, true); 
+    normalmap = loadTexture(gl, img_normal); 
   }
 
 
@@ -551,8 +587,8 @@ function initTube(gl, coords, img_day=undefined, img_night=undefined, img_normal
     program: shaderProgram,
     attribLocations: {
       vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-      normalPosition: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
-      textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+      //normalPosition: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
+      //textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
     },
     uniformLocations: {
       projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
@@ -566,7 +602,7 @@ function initTube(gl, coords, img_day=undefined, img_night=undefined, img_normal
     },
   };  
   thisprogram.buffers = plotTube(gl, thisprogram, locStart, locEnd);
-  console.log("vertex count: " + thisprogram.buffers.indexlen);
+  //console.log("vertex count: " + thisprogram.buffers.indexlen);
   thisprogram.texture = thistexture;
   thisprogram.textureNight = nighttexture;
   thisprogram.textureNormal = normalmap;
@@ -581,14 +617,14 @@ function initAtmos(gl, segments, img_day=undefined, img_night=undefined) {
   let nighttexture = undefined;
   
   if (img_day == undefined) { 
-    thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
+    thistexture = loadTexture(gl, undefined, [255,255,255,255]);
   } else {
-    thistexture = loadTexture(gl, img_day, true);
+    thistexture = loadTexture(gl, img_day);
   }
   if (img_day == undefined) { 
-    thistexture = loadTexture(gl, undefined, false, [255,255,255,255]);
+    thistexture = loadTexture(gl, undefined, [255,255,255,255]);
   } else {
-    nighttexture = loadTexture(gl, img_night, true);
+    nighttexture = loadTexture(gl, img_night);
   }
 
 
@@ -620,7 +656,7 @@ function initAtmos(gl, segments, img_day=undefined, img_night=undefined) {
 
 function initSkybox(gl, img_background) {
   
-  let thistexture = loadTexture(gl, img_background, true);
+  let thistexture = loadTexture(gl, img_background);
   let shaderProgram = initShaderProgram(gl, vsSpace, fsSpace)
 
   thisprogram = {
@@ -906,12 +942,13 @@ function drawSkybox(gl, programInfo) {
 
 
 //calc a line between two points made from X segments and at least Y distance apart
-function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance = 0.06) {
+function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance = 0.08) {
   let nextVec = [];
   let diffVec = [];
   let vertexPositionData = [];
   let indexData = [];
   let textureCoordData = [];
+  let pathPointsData = [];
   let tubeNumb = 0;
 
   if (minDistance <= 0.0) {
@@ -927,6 +964,7 @@ function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance =
   
   prevPoint = startVec; //setting this now avoids the need for an extra if check inside the loop
   //orbPoints.push(startVec);
+  pathPointsData.push(prevPoint);
 
   //console.log("steps: " + steps);
   diffVec[0] = (endVec[0] - startVec[0]) / steps;
@@ -952,6 +990,7 @@ function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance =
       vertexPositionData = vertexPositionData.concat(t.positions);
       indexData = indexData.concat(t.index);
       textureCoordData = textureCoordData.concat(t.textureCoord);
+      pathPointsData = pathPointsData.concat(t.pathPoints);
     }
     currVec = nextVec;
   }
@@ -965,6 +1004,7 @@ function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance =
   vertexPositionData = vertexPositionData.concat(t.positions);
   indexData = indexData.concat(t.index);
   textureCoordData = textureCoordData.concat(t.textureCoord);
+  pathPointsData = pathPointsData.concat(t.pathPoints);
 
   bufferPoints = initGlBuffers(gl, prog, vertexPositionData, undefined, textureCoordData, indexData);
 
@@ -978,6 +1018,7 @@ function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance =
   gl.vertexAttribPointer(VertexPosition, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(VertexPosition);
   
+  bufferPoints.orbPathPoints = pathPointsData;
   return bufferPoints;
 }
 
@@ -1075,24 +1116,30 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0, tubeSize = 0.01) {
   //   0.0, 0.0,
   // ];
 
-  // finally plot orb steps between the start and end
+
+  //finally plot orb steps between the start and end
+  let pathPoints = [];
   //get distance between points
-
+  let dist = vec3.distance(vecStart, vecEnd);
   //divide by our wanted distance 0.05 in our case
-
+  let points = dist / 0.01;
   //now we know how many points we will need
-  stepCount = 0;
+  let stepPoint = vecStart;
 
-  // for (let i=0; stepCount < i; i++) {
-
+  //TODO: need to plot points in advance, the for loop dosent work :(
+  // for (let i=0; points > i; i++) {
+  //   vec3.add(stepPoint, stepPoint, [points,points,points]);
+  //   pathPoints.push(stepPoint);
   // }
 
+  pathPoints.push(vecEnd);
 
   //use point to mark triangle
   return {
     positions: tubePoints,
     index: indexData,
     textureCoord: textureCoordData,
+    pathPoints: pathPoints
   }
 }
 

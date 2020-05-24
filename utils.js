@@ -59,7 +59,7 @@ function loadShader(gl, type, source, name) {
 // Initialize a texture and load an image.
 // When the image finished loading copy it into the texture.
 //
-function loadTexture(gl, url=undefined, flip=false, emptyColor=[0, 0, 0, 255]) {
+function loadTexture(gl, url=undefined, emptyColor=[0, 0, 0, 255]) {
   const texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -82,12 +82,8 @@ function loadTexture(gl, url=undefined, flip=false, emptyColor=[0, 0, 0, 255]) {
                 pixel);
 
   var image = new Image();
-  image.flip = flip;
   image.onload = function() {
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    if (this.flip == true) {
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
-    }
     gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
                   srcFormat, srcType, image);
 
@@ -184,10 +180,9 @@ function initGlBuffers(gl, prog,
 }
 
 
-function plotSphere(gl, prog, bands=[10,10]) {
+function plotSphere(gl, prog, bands=[10,10], radius=1) {
   let latitudeBands = bands[0];
   let longitudeBands = bands[1];
-  let radius = 1;
 
   let vertexPositionData = [];
   let normalData = [];
