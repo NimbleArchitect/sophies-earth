@@ -325,8 +325,6 @@ function init() {
   programInfo[2] = initAtmos(gl, [90, 90]);
   programInfo[3] = initPlanet(gl, [30, 30], 'moon.jpg', 'moon.jpg', '');
 
-  programInfo[4] = initPlanet(gl, [4, 4]); //points of the line
-
 }
 
 function drawScene(gl, programList, deltaTime=0.01) {
@@ -420,9 +418,11 @@ function drawScene(gl, programList, deltaTime=0.01) {
   for (let l = 0; l < lineCount; l++) {
     let thisLine = lineProgram[l];
     //console.log("thisLine: " + thisLine);
-    let ballMatrix = mat4.create();
-    mat4.scale(ballMatrix, ballMatrix, [0.005, 0.005, 0.005]);
-    mat4.translate(ballMatrix, ballMatrix, worldTilt);
+
+    const lineMatrix = mat4.create();
+    mat4.translate( lineMatrix, lineMatrix, worldTilt);
+
+/////////////////////
     mat3.set(ambientLightMatrix, 
       1.0, 0.0, 0.0,
       1.0 ,0.0, 0.0, //color
@@ -433,7 +433,7 @@ function drawScene(gl, programList, deltaTime=0.01) {
     //mat4.multiply(m, viewMatrix, ballMatrix);
     //mat4.multiply(mvpMatrix, projectionMatrix, m);
     //drawPlanet(gl, programList[4], mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
-    drawTube(gl, thisLine, mvpMatrix, viewMatrix, ballMatrix, ambientLightMatrix)  
+    drawTube(gl, thisLine, mvpMatrix, viewMatrix, lineMatrix, ambientLightMatrix)  
 
   }
   //***********************************************
@@ -841,12 +841,12 @@ function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLi
   //   gl.uniform1i(programInfo.uniformLocations.uNight, 2);
   // }
   
-  gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
-  // if (wireframe == false) {
-  //   gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
-  // } else {
-  //   gl.drawElements(gl.LINES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
-  // }
+  //gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+  if (wireframe == false) {
+    gl.drawElements(gl.TRIANGLES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+  } else {
+    gl.drawElements(gl.LINES, programInfo.buffers.indexlen, gl.UNSIGNED_SHORT, 0);
+  }
 }
 
 
@@ -906,7 +906,7 @@ function drawSkybox(gl, programInfo) {
 
 
 //calc a line between two points made from X segments and at least Y distance apart
-function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.06) {
+function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance = 0.06) {
   let nextVec = [];
   let diffVec = [];
   let vertexPositionData = [];
@@ -922,48 +922,49 @@ function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.0
   endVec = convert2Map(endpoint);
   currVec = startVec;
 
-  gap = checkGap(startVec, endVec);
-  steps = steps * (gap)
+  gap = vec3.distance(startVec, endVec);
+  steps = (stepCount * (gap)) - 1;
   
-  prevPoint = startVec; //setting this now avoids the need for an if check inside the loop
+  prevPoint = startVec; //setting this now avoids the need for an extra if check inside the loop
+  //orbPoints.push(startVec);
 
   //console.log("steps: " + steps);
   diffVec[0] = (endVec[0] - startVec[0]) / steps;
   diffVec[1] = (endVec[1] - startVec[1]) / steps;
   diffVec[2] = (endVec[2] - startVec[2]) / steps;
-  //let pointCounter = 1;
-  for (let i=1; i <= steps; i++) {
+
+  for (let i=1; i < steps; i++) {
     //calculate the next vector and store in nextVec
     nextVec[0] = startVec[0] + (diffVec[0] * i);
     nextVec[1] = startVec[1] + (diffVec[1] * i);
     nextVec[2] = startVec[2] + (diffVec[2] * i);
     
     pos = movePoint2Sphere(currVec, nextVec);
-    //scan bewteen points and ignore points that are too close
-    gap = checkGap(prevPoint, pos);
+    //scan between points and ignore those that are too close
+    gap = vec3.distance(prevPoint, pos);
     if (gap > minDistance) {
       //calc tube of triangles between 2 points
       t = calcTubes(prevPoint, pos, tubeNumb);
+      //orbPoints.push(pos);
       tubeNumb += 1;
       prevPoint = pos;
       //merge the arrays
       vertexPositionData = vertexPositionData.concat(t.positions);
       indexData = indexData.concat(t.index);
       textureCoordData = textureCoordData.concat(t.textureCoord);
-      //pointCounter += 1;
     }
     currVec = nextVec;
   }
 
   //always add the endpoint :)
   endVec = convert2Map(endpoint);
-  pos = movePoint2Sphere(currVec, endVec);
-  t = calcTubes(prevPoint, pos, tubeNumb);
+  t = calcTubes(prevPoint, endVec, tubeNumb);
+  //orbPoints.push(endVec);
+
   //merge the arrays
   vertexPositionData = vertexPositionData.concat(t.positions);
   indexData = indexData.concat(t.index);
   textureCoordData = textureCoordData.concat(t.textureCoord);
-  //indexlength = indexData.length; //get number of triangles
 
   bufferPoints = initGlBuffers(gl, prog, vertexPositionData, undefined, textureCoordData, indexData);
 
@@ -977,22 +978,20 @@ function plotTube(gl, prog, startpoint, endpoint, steps = 120, minDistance = 0.0
   gl.vertexAttribPointer(VertexPosition, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(VertexPosition);
   
-  //bufferPoints.indexlen = indexlength/3;
   return bufferPoints;
 }
 
 
-function calcTubes(startPoint, endPoint, tubeNumb = 0) {
-  let out = [];
+function calcTubes(startPoint, endPoint, tubeNumb = 0, tubeSize = 0.01) {
   let im = (8) * tubeNumb;
 
   //draw x points of circle on x/z plane
   
   let endCap = [  
-    0.01, 0.0, -0.01, //0 4 front right top
-    0.01, 0.0,  0.01, //1 5 back right top
-   -0.01, 0.0,  0.01, //2 6 back left top
-   -0.01, 0.0, -0.01 //3 7 front left top
+    tubeSize, 0.0, -tubeSize, //0 4 front right top
+    tubeSize, 0.0,  tubeSize, //1 5 back right top
+   -tubeSize, 0.0,  tubeSize, //2 6 back left top
+   -tubeSize, 0.0, -tubeSize //3 7 front left top
   ];
 
   let matTopPos = mat4.create();
@@ -1011,14 +1010,14 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0) {
  
   vecStart = vec3.fromValues(startPoint[0], startPoint[1], startPoint[2]); //obj1
   vecEnd = vec3.fromValues(endPoint[0], endPoint[1], endPoint[2]); //obj2
-  up = vec3.fromValues(0.0, 1.0, 0.0);
+  up = vec3.fromValues(1.0, 0.0, 0.0);
   
   //calculate rotation to face each other
   vec3.subtract(forward, vecEnd, vecStart);
   vec3.cross(tangent, forward, up);
 
   if (tangent.length < 0.000001) {
-    up = vec3.fromValues(1.0, 0.0, 0.0);
+    up = vec3.fromValues(0.0, 1.0, 0.0);
     vec3.cross(tangent, forward, up);
   }
   vec3.normalize(tangent, tangent);
@@ -1026,7 +1025,8 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0) {
   rotation = mat4.fromValues(
     forward[0], up[0], tangent[0], 1.0,
     forward[1], up[1], tangent[1], 1.0,
-    forward[2], up[2], tangent[2], 1.0
+    forward[2], up[2], tangent[2], 1.0,
+    0, 0, 0, 1
   );
 
   //mat3.multiply(matTopPos, rotation, )
@@ -1037,6 +1037,11 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0) {
   mat4.fromTranslation(matTopPos, vecEnd);
   mat4.fromTranslation(matBottomPos, vecStart);
   
+  mat4.multiply(matTopPos, matTopPos, rotation);
+  //mat4.multiply(matBottomPos, matBottomPos, rotation);
+  
+  //TransformedVector = TranslationM * RotationM * ScaleM * OriginalVec;
+
   vec3.forEach(arrCapTop, 3, 0, 0, vec3.transformMat4, matTopPos);
   vec3.forEach(arrCapBottom, 3, 0, 0, vec3.transformMat4, matBottomPos);
 
@@ -1069,6 +1074,18 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0) {
   //   1.0, 0.0,
   //   0.0, 0.0,
   // ];
+
+  // finally plot orb steps between the start and end
+  //get distance between points
+
+  //divide by our wanted distance 0.05 in our case
+
+  //now we know how many points we will need
+  stepCount = 0;
+
+  // for (let i=0; stepCount < i; i++) {
+
+  // }
 
 
   //use point to mark triangle
