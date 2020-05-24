@@ -320,27 +320,6 @@ function movePoint2Sphere(v1, v2, radius = 1.03) {
 }
 
 
-//calculate and return the largest distance between two vectors
-// returns the largest x, y or z
-function checkGap(v1, v2, val) {
-  //is gap big enough
-  diffX = Math.abs(v1[0] - v2[0]);
-  diffY = Math.abs(v1[1] - v2[1]);
-  diffZ = Math.abs(v1[2] - v2[2]);
-
-  // console.log("diffX:" + diffX+"/"+(diffX > val));
-  // console.log("diffY:" + diffY+"/"+(diffY > val));
-  // console.log("diffZ:" + diffZ+"/"+(diffZ > val));
-
-  max = diffX;
-  if (max < diffY) {max = diffY;}
-  if (max < diffZ) {max = diffZ;}
-  //console.log("max:" + max);
-    
-  return max;
-}
-
-
 //given longituide and lattitude return a 3d position
 function convert2Map(cords, multiplier = 1.0) {
   latitude = cords[0] + 0.15; // north / south - y
