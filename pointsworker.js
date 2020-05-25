@@ -7,7 +7,7 @@ var currPoint = 0
 var points = []
 
 //points.push([51.504739, -0.086558]); //london - the shard
-points.push([50.039246, -5.675544]); //cornwall
+//points.push([50.039246, -5.675544]); //cornwall
 points.push([36.101764, 138.231323]); //japan
 points.push([8.322576, 77.569631]); //south india
 points.push([-46.332722, 168.954283]); //new zealand

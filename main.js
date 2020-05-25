@@ -431,29 +431,43 @@ function drawScene(gl, programList, deltaTime=0.01) {
       
     drawTube(gl, thisLine, mvpMatrix, viewMatrix, lineMatrix, ambientLightMatrix);
       
-    let orbPoints = thisLine.buffers.orbPathPoints; //list of points for the orb position
-    let orbPos = orbPosition[l];
-    if (orbPos == undefined) {
+    let orbPointList = thisLine.buffers.orbPathPoints; //list of points for the orb position
+    let orbPoint = orbPosition[l];
+    if (orbPoint == undefined) {
       //let op = orbPosition[l]
-      orbPos = 0;
+      //orbPoint = 0.0;
+      orbPoint = 0;
     } else {
-      orbPos += 1;
-      if (orbPoints.length <= orbPos) {
-        orbPos = 0;
+      // orbPoint += 0.1;
+      orbPoint += 1;
+      if (orbPointList.length <= orbPoint) {
+        // orbPoint = 0.0;
+        orbPoint = 0;
       }
     }
-    pos = orbPoints[orbPos];
-    orbPosition[l] = orbPos;
+    orbPos = orbPointList[orbPoint];
+    orbPosition[l] = orbPoint;
 
-    // ballMatrix = mat4.create();
-    // mat4.rotateZ(worldTilt, worldTilt, 0.15);
-    // mat4.rotateY(ballMatrix, ballMatrix, angle);
+    // orbWholeStep = Math.floor(orbPoint);
+    // pos = orbPointList[orbWholeStep];
+    // orbPosition[l] = orbPoint;
+    
+    // orbStep = Math.round((orbPoint - orbWholeStep))
+
+    // let vecDirection = vec3.create();
+    // let orbPos = vec3.create();
+
+    // vecDirection = vec3.subtract(vecDirection, pos.end, pos.start);
+    // vec3.normalize(vecDirection, vecDirection);
+    // vec3.multiply(orbPos, vecDirection, [orbStep,orbStep,orbStep]);
+    // vec3.multiply(orbPos, orbPos, pos.start);
+    
+
     const ballMatrix = mat4.create();
 
-    //mat4.translate(ballMatrix, ballMatrix, [0.0, 0.0, 0.0]);
     mat4.rotateZ(ballMatrix, ballMatrix, 0.15);
     mat4.rotateY(ballMatrix, ballMatrix, angle);
-    mat4.translate(ballMatrix, ballMatrix, pos);
+    mat4.translate(ballMatrix, ballMatrix, orbPos);
     
     //mat4.fromTranslation( ballMatrix, pos);
     //mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
@@ -461,7 +475,7 @@ function drawScene(gl, programList, deltaTime=0.01) {
     mat3.set(ambientLightMatrix, 
       1.0, 0.0, 0.0,
       //Math.random() , Math.random(), Math.random(),
-      0.0, 0.0, 0.9,
+      0.6, 0.6, 0.9,
       0.0, 0.0, 0.0);
 
     mBall = mat4.create();
@@ -587,8 +601,8 @@ function initTube(gl, coords, img_day=undefined, img_night=undefined, img_normal
     program: shaderProgram,
     attribLocations: {
       vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-      //normalPosition: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
-      //textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+      normalPosition: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
+      textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
     },
     uniformLocations: {
       projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
@@ -795,16 +809,16 @@ function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLi
   // Tell WebGL to use our program when drawing
   gl.useProgram(programInfo.program);
 
-  // gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.textureCoord);
-  // gl.vertexAttribPointer(
-  //   programInfo.attribLocations.textureCoord,
-  //   2,
-  //   type,
-  //   normalize,
-  //   stride,
-  //   offset);
-  // gl.enableVertexAttribArray(
-  //     programInfo.attribLocations.textureCoord);
+  gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.textureCoord);
+  gl.vertexAttribPointer(
+    programInfo.attribLocations.textureCoord,
+    2,
+    type,
+    normalize,
+    stride,
+    offset);
+  gl.enableVertexAttribArray(
+      programInfo.attribLocations.textureCoord);
 
   // Set vertice positions
   gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.position);
@@ -818,19 +832,19 @@ function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLi
   gl.enableVertexAttribArray(
     programInfo.attribLocations.vertexPosition);
     
-  // if (typeof programInfo.buffers.normals !== 'undefined') {
-  //   //set normals
-  //   gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.normals);
-  //   gl.vertexAttribPointer(
-  //     programInfo.attribLocations.normalPosition,
-  //     numComponents,
-  //     type,
-  //     normalize,
-  //     stride,
-  //     offset);
-  //   gl.enableVertexAttribArray(
-  //     programInfo.attribLocations.normalPosition);
-  // }
+  if (typeof programInfo.buffers.normals !== 'undefined') {
+    //set normals
+    gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.normals);
+    gl.vertexAttribPointer(
+      programInfo.attribLocations.normalPosition,
+      numComponents,
+      type,
+      normalize,
+      stride,
+      offset);
+    gl.enableVertexAttribArray(
+      programInfo.attribLocations.normalPosition);
+  }
       
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, programInfo.buffers.indicies);
 
@@ -852,21 +866,21 @@ function drawTube(gl, programInfo, mvpMatrix, viewMatrix, modelMatrix, ambientLi
     false,
     ambientLightMatrix);
 
-  // // Tell WebGL we want to affect texture unit 0
-  // gl.activeTexture(gl.TEXTURE0);
-  // // Bind the texture to texture unit 0
-  // gl.bindTexture(gl.TEXTURE_2D, programInfo.texture);
-  // // Tell the shader we bound the texture to texture unit 0
-  // gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+  // Tell WebGL we want to affect texture unit 0
+  gl.activeTexture(gl.TEXTURE0);
+  // Bind the texture to texture unit 0
+  gl.bindTexture(gl.TEXTURE_2D, programInfo.texture);
+  // Tell the shader we bound the texture to texture unit 0
+  gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
-  // if (typeof programInfo.textureNormal !== 'undefined') {
-  //   // Tell WebGL we want to affect texture unit 1
-  //   gl.activeTexture(gl.TEXTURE1);
-  //   // Bind the texture to texture unit 1
-  //   gl.bindTexture(gl.TEXTURE_2D, programInfo.textureNormal);
-  //   // Tell the shader we bound the texture to texture unit 1
-  //   gl.uniform1i(programInfo.uniformLocations.uNormal, 1);
-  // }
+  if (typeof programInfo.textureNormal !== 'undefined') {
+    // Tell WebGL we want to affect texture unit 1
+    gl.activeTexture(gl.TEXTURE1);
+    // Bind the texture to texture unit 1
+    gl.bindTexture(gl.TEXTURE_2D, programInfo.textureNormal);
+    // Tell the shader we bound the texture to texture unit 1
+    gl.uniform1i(programInfo.uniformLocations.uNormal, 1);
+  }
   
   //  if (typeof programInfo.textureNight !== 'undefined') {
   //   // Tell WebGL we want to affect texture unit 2
@@ -962,7 +976,7 @@ function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance =
   gap = vec3.distance(startVec, endVec);
   steps = (stepCount * (gap)) - 1;
   
-  prevPoint = startVec; //setting this now avoids the need for an extra if check inside the loop
+  let prevPoint = startVec; //setting this now avoids the need for an extra if check inside the loop
   //orbPoints.push(startVec);
   pathPointsData.push(prevPoint);
 
@@ -982,7 +996,7 @@ function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance =
     gap = vec3.distance(prevPoint, pos);
     if (gap > minDistance) {
       //calc tube of triangles between 2 points
-      t = calcTubes(prevPoint, pos, tubeNumb);
+      let t = calcTubes(prevPoint, pos, tubeNumb);
       //orbPoints.push(pos);
       tubeNumb += 1;
       prevPoint = pos;
@@ -1110,14 +1124,21 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0, tubeSize = 0.01) {
 
   //Disabled textures for now
   var textureCoordData = [];
-  // var textureCoordData = [
-  //   1.0, 1.0,
-  //   1.0, 0.0,
-  //   0.0, 0.0,
-  // ];
+  var textureCoordData = [
+    //0,     ,4       , 3       ,
+    1.0, 0.0, 1.0, 1.0, 0.0, 0.0, //front face
+    //7,     ,3       , 4       ,
+    0.0, 1.0, 0.0, 0.0, 1.0, 1.0, //front face
+    1.0, 0.0, 1.0, 1.0, 0.0, 0.0, //left face
+    0.0, 1.0, 0.0, 0.0, 1.0, 1.0, //left face
+    1.0, 0.0, 1.0, 1.0, 0.0, 0.0, //back face
+    0.0, 1.0, 0.0, 0.0, 1.0, 1.0, //back face
+    1.0, 0.0, 1.0, 1.0, 0.0, 0.0, //right face
+    0.0, 1.0, 0.0, 0.0, 1.0, 1.0 //right face
+  ];
 
 
-  //finally plot orb steps between the start and end
+  // //finally plot orb steps between the start and end
   let pathPoints = [];
   //get distance between points
   let dist = vec3.distance(vecStart, vecEnd);
@@ -1126,13 +1147,28 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0, tubeSize = 0.01) {
   //now we know how many points we will need
   let stepPoint = vecStart;
 
-  //TODO: need to plot points in advance, the for loop dosent work :(
-  // for (let i=0; points > i; i++) {
-  //   vec3.add(stepPoint, stepPoint, [points,points,points]);
-  //   pathPoints.push(stepPoint);
-  // }
+  let distance = vec3.create();
+  vec3.subtract(distance, vecEnd, vecStart);
+  x = distance[0] / points;
+  y = distance[1] / points;
+  z = distance[2] / points;
 
-  pathPoints.push(vecEnd);
+  //TODO: need to plot points in advance, the for loop dosent work :(
+    for (let i=0; points > i; i++) {
+    let sp = [];
+    //vec3.add(stepPoint, stepPoint, [x,y,z]);
+    sp[0] = vecStart[0] + (x * i);
+    sp[1] = vecStart[1] + (y * i);
+    sp[2] = vecStart[2] + (z * i);
+    //console.log(sp[0]);
+    pathPoints.push(sp);
+  }
+
+  pathPoints.push(endPoint);
+  // let pathPoints = { 
+  //   start: vecStart,
+  //   end: vecEnd
+  // };
 
   //use point to mark triangle
   return {
@@ -1171,7 +1207,7 @@ init();
 
 let myWorker = new Worker('pointsworker.js');
 myWorker.onmessage = function(e) {
-  line = initTube(gl, [e.data, centralLocation]);
+  line = initTube(gl, [e.data, centralLocation], 'moon.jpg');
   lineProgram.push(line);
   coords.push(line);
 }

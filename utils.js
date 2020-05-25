@@ -240,7 +240,7 @@ function plotSphere(gl, prog, bands=[10,10], radius=1) {
   
   // Assign texturePosition
   let texturePosition = prog.attribLocations.texturePosition;
-  gl.vertexAttribPointer(texturePosition, 3, gl.FLOAT, false, 0, 0);
+  gl.vertexAttribPointer(texturePosition, 2, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(texturePosition);
   
   // Assign position coords to attrib and enable it.
