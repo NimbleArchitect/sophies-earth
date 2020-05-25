@@ -963,6 +963,7 @@ function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance =
   let indexData = [];
   let textureCoordData = [];
   let pathPointsData = [];
+  let normalData = [];
   let tubeNumb = 0;
 
   if (minDistance <= 0.0) {
@@ -1004,6 +1005,7 @@ function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance =
       vertexPositionData = vertexPositionData.concat(t.positions);
       indexData = indexData.concat(t.index);
       textureCoordData = textureCoordData.concat(t.textureCoord);
+      normalData = normalData.concat(t.normalData);
       pathPointsData = pathPointsData.concat(t.pathPoints);
     }
     currVec = nextVec;
@@ -1018,9 +1020,10 @@ function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance =
   vertexPositionData = vertexPositionData.concat(t.positions);
   indexData = indexData.concat(t.index);
   textureCoordData = textureCoordData.concat(t.textureCoord);
+  normalData = normalData.concat(t.normalData);
   pathPointsData = pathPointsData.concat(t.pathPoints);
 
-  bufferPoints = initGlBuffers(gl, prog, vertexPositionData, undefined, textureCoordData, indexData);
+  bufferPoints = initGlBuffers(gl, prog, vertexPositionData, normalData, textureCoordData, indexData);
 
   // Assign texturePosition
   let texturePosition = prog.attribLocations.texturePosition;
@@ -1134,9 +1137,17 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0, tubeSize = 0.01) {
     1.0, 0.0, 1.0, 1.0, 0.0, 0.0, //back face
     0.0, 1.0, 0.0, 0.0, 1.0, 1.0, //back face
     1.0, 0.0, 1.0, 1.0, 0.0, 0.0, //right face
-    0.0, 1.0, 0.0, 0.0, 1.0, 1.0 //right face
+    0.0, 1.0, 0.0, 0.0, 1.0, 1.0, //right face
   ];
 
+  //TODO: fake data need to be fixed
+  var normalData = [];
+  normalData = [
+    1.0, 0.0, 1.0, 1.0, 0.0, 0.0, //front face
+    0.0, 1.0, 0.0, 0.0, 1.0, 1.0, //front face
+    1.0, 0.0, 1.0, 1.0, 0.0, 0.0, //left face
+    0.0, 1.0, 0.0, 0.0, 1.0, 1.0, //left face
+  ];
 
   // //finally plot orb steps between the start and end
   let pathPoints = [];
@@ -1175,6 +1186,7 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0, tubeSize = 0.01) {
     positions: tubePoints,
     index: indexData,
     textureCoord: textureCoordData,
+    normalData: normalData,
     pathPoints: pathPoints
   }
 }

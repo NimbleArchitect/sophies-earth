@@ -175,7 +175,7 @@ function initGlBuffers(gl, prog,
     normals: vertexNormalBuffer,
     textureCoord: textureCoordBuffer,
     indicies: indexBuffer,
-    indexlen: indexData.length
+    indexlen: vertexIndex.length
   }
 }
 
