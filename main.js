@@ -328,6 +328,7 @@ function init() {
   programInfo[4] = initPlanet(gl, [8, 8], undefined, undefined, undefined, 0.02);
 }
 
+
 function drawScene(gl, programList, deltaTime=0.01) {
   gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
   gl.clearDepth(1.0);                 // Clear everything
@@ -341,11 +342,24 @@ function drawScene(gl, programList, deltaTime=0.01) {
   // Create a perspective matrix, a special matrix that is  
   const fieldOfView = 45 * PI / 180;   // in radians
   const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-  const projectionMatrix = mat4.create();
   //const spinspeed = 0.00005;
   const spinspeed = 0.00005;
+  
+  const ambientLightMatrix = mat3.create();
+  const tubeambientLightMatrix = mat3.create();
+  const orbambientLightMatrix = mat3.create();
+  
+  const projectionMatrix = mat4.create();
+  const viewMatrix = mat4.create();
+  const worldTilt = mat4.create();
+  const moonMatrix = mat4.create();
+  const lineMatrix = mat4.create();
+  const mBall = mat4.create();
+  const mvpBallMatrix = mat4.create();
+  const orbMatrix = mat4.create();
+  const orbCommonMatrix = mat4.create();
 
-  let ambientLightMatrix = mat3.create();
+  
   mat3.set(ambientLightMatrix, 
           1.0, 0.0, 0.0, //brightness
           1.0, 1.0, 1.0, //light colour
@@ -355,7 +369,6 @@ function drawScene(gl, programList, deltaTime=0.01) {
   // as the destination to receive the result.
   mat4.perspective(projectionMatrix, PI/6, aspect, 0.1, 100.0);
   
-  let viewMatrix = mat4.create();
   //mat4.targetTo(viewMatrix,
   mat4.lookAt(viewMatrix, 
     // [0, 2.0, -3.0], //[0, 2.5, -5],
@@ -375,19 +388,16 @@ function drawScene(gl, programList, deltaTime=0.01) {
   if (rotangle > 6.28319) {
     rotangle = 0.0; //console.log("moon reset");
   }
-  
 
   drawSkybox(gl, programList[0]);
   
   //draw earth
-  const worldTilt = mat4.create();
-
   mat4.translate(worldTilt, worldTilt, [0.0, 0.0, 0.0]);
   mat4.rotateZ(worldTilt, worldTilt, 0.15);
   mat4.rotateY(worldTilt, worldTilt, angle);
 
-  let m =  mat4.create();
-  let mvpMatrix = mat4.create();
+  const m =  mat4.create();
+  const mvpMatrix = mat4.create();
   mat4.multiply(m, viewMatrix, worldTilt);
   mat4.multiply(mvpMatrix, projectionMatrix, m);
   
@@ -407,29 +417,29 @@ function drawScene(gl, programList, deltaTime=0.01) {
 
 //////////////////////////////////////
 
-  //draw green ball
-  const scalefactor = 0.010;
-  //scalefactor = 0.050;
-  
+  mat3.set(tubeambientLightMatrix, 
+    1.0, 0.0, 0.0,
+    1.0 ,0.0, 0.0, //color
+    0.0, 0.0, 0.0);
 
-  //draw the lines
+  mat3.set(orbambientLightMatrix, 
+    1.0, 0.0, 0.0,
+    //Math.random() , Math.random(), Math.random(),
+    0.6, 0.6, 0.9,
+    0.0, 0.0, 0.0);
+
   let lineCount = lineProgram.length;
-
-//FIXME: line drawing is almost working
+  mat4.translate( lineMatrix, lineMatrix, worldTilt);
+  
+  mat4.rotateZ(orbCommonMatrix, orbCommonMatrix, 0.15);
+  mat4.rotateY(orbCommonMatrix, orbCommonMatrix, angle);
+  
+  //draw the lines
   for (let l = 0; l < lineCount; l++) {
     let thisLine = lineProgram[l];
     //console.log("thisLine: " + thisLine);
 
-    const lineMatrix = mat4.create();
-    mat4.translate( lineMatrix, lineMatrix, worldTilt);
-    
-    /////////////////////
-    mat3.set(ambientLightMatrix, 
-      1.0, 0.0, 0.0,
-      1.0 ,0.0, 0.0, //color
-      0.0, 0.0, 0.0);
-      
-    drawTube(gl, thisLine, mvpMatrix, viewMatrix, lineMatrix, ambientLightMatrix);
+    drawTube(gl, thisLine, mvpMatrix, viewMatrix, lineMatrix, tubeambientLightMatrix);
       
     let orbPointList = thisLine.buffers.orbPathPoints; //list of points for the orb position
     let orbPoint = orbPosition[l];
@@ -445,56 +455,17 @@ function drawScene(gl, programList, deltaTime=0.01) {
         orbPoint = 0;
       }
     }
-    orbPos = orbPointList[orbPoint];
+
+    mat4.translate(orbMatrix, worldTilt, orbPointList[orbPoint]);
     orbPosition[l] = orbPoint;
 
-    // orbWholeStep = Math.floor(orbPoint);
-    // pos = orbPointList[orbWholeStep];
-    // orbPosition[l] = orbPoint;
-    
-    // orbStep = Math.round((orbPoint - orbWholeStep))
-
-    // let vecDirection = vec3.create();
-    // let orbPos = vec3.create();
-
-    // vecDirection = vec3.subtract(vecDirection, pos.end, pos.start);
-    // vec3.normalize(vecDirection, vecDirection);
-    // vec3.multiply(orbPos, vecDirection, [orbStep,orbStep,orbStep]);
-    // vec3.multiply(orbPos, orbPos, pos.start);
-    
-
-    const ballMatrix = mat4.create();
-
-    mat4.rotateZ(ballMatrix, ballMatrix, 0.15);
-    mat4.rotateY(ballMatrix, ballMatrix, angle);
-    mat4.translate(ballMatrix, ballMatrix, orbPos);
-    
-    //mat4.fromTranslation( ballMatrix, pos);
-    //mat4.scale(ballMatrix, ballMatrix, [scalefactor, scalefactor, scalefactor]);
-    //mat4.multiply( ballMatrix, ballMatrix, worldTilt);
-    mat3.set(ambientLightMatrix, 
-      1.0, 0.0, 0.0,
-      //Math.random() , Math.random(), Math.random(),
-      0.6, 0.6, 0.9,
-      0.0, 0.0, 0.0);
-
-    mBall = mat4.create();
-    mvpBallMatrix = mat4.create();
-    mat4.multiply(mBall, viewMatrix, ballMatrix);
+    mat4.multiply(mBall, viewMatrix, orbMatrix);
     mat4.multiply(mvpBallMatrix, projectionMatrix, mBall);
 
-    drawPlanet(gl, programList[4], mvpBallMatrix, viewMatrix, ballMatrix, ambientLightMatrix)
-
+    drawPlanet(gl, programList[4], mvpBallMatrix, viewMatrix, orbMatrix, orbambientLightMatrix);
   }
-  //***********************************************
-  //***********************************************
-  // if (lineCount >=4) {
-  //   stillRunning = false;
-  // }
 
   //draw moon
-  viewMatrix = mat4.create();
-  //mat4.targetTo(viewMatrix,
   mat4.lookAt(viewMatrix, 
       [0, 0, -6], 
       [0, 0, 0], 
@@ -506,14 +477,12 @@ function drawScene(gl, programList, deltaTime=0.01) {
     0.0, 0.0, 0.0);
           
 
-  const moonMatrix = mat4.create();
   mat4.scale(moonMatrix, moonMatrix, [0.25, 0.25, 0.25]);
   mat4.rotateY( moonMatrix, moonMatrix, rotangle);
 
   mat4.translate( moonMatrix, moonMatrix, [-7.0, 0.0, 0.0]);
   mat4.rotateY( moonMatrix, moonMatrix, 4);
-  m =  mat4.create();
-  mvpMatrix = mat4.create();
+
   mat4.multiply(m, viewMatrix, moonMatrix);
   mat4.multiply(mvpMatrix, projectionMatrix, m);
   drawPlanet(gl, programList[3], mvpMatrix, viewMatrix, moonMatrix, ambientLightMatrix)
@@ -992,7 +961,7 @@ function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance =
     nextVec[1] = startVec[1] + (diffVec[1] * i);
     nextVec[2] = startVec[2] + (diffVec[2] * i);
     
-    pos = movePoint2Sphere(currVec, nextVec);
+    let pos = movePoint2Sphere(currVec, nextVec);
     //scan between points and ignore those that are too close
     gap = vec3.distance(prevPoint, pos);
     if (gap > minDistance) {
@@ -1023,7 +992,7 @@ function plotTube(gl, prog, startpoint, endpoint, stepCount = 120, minDistance =
   normalData = normalData.concat(t.normalData);
   pathPointsData = pathPointsData.concat(t.pathPoints);
 
-  bufferPoints = initGlBuffers(gl, prog, vertexPositionData, normalData, textureCoordData, indexData);
+  let bufferPoints = initGlBuffers(gl, prog, vertexPositionData, normalData, textureCoordData, indexData);
 
   // Assign texturePosition
   let texturePosition = prog.attribLocations.texturePosition;
@@ -1104,7 +1073,7 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0, tubeSize = 0.01) {
   vec3.forEach(arrCapBottom, 3, 0, 0, vec3.transformMat4, matBottomPos);
 
 
-  tubePoints = arrCapBottom.concat(arrCapTop);
+  let tubePoints = arrCapBottom.concat(arrCapTop);
 //  tubePoints = vecCapTop.concat(arrCapBottom);
 
   // front     |  left      |  back      |  right     |
@@ -1114,7 +1083,7 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0, tubeSize = 0.01) {
   //  /---|0   |   /---|3   |   /---|1   |   /---|2   |
   // 3         |  2         |  2         |  0         |
 
-  var indexData = [
+  let indexData = [
     0 + im, 4 + im, 3 + im,  //front face
     7 + im, 3 + im, 4 + im,  //front face
     3 + im, 7 + im, 2 + im,  //left face
@@ -1126,8 +1095,8 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0, tubeSize = 0.01) {
   ];
 
   //Disabled textures for now
-  var textureCoordData = [];
-  var textureCoordData = [
+  //let textureCoordData = [];
+  let textureCoordData = [
     //0,     ,4       , 3       ,
     1.0, 0.0, 1.0, 1.0, 0.0, 0.0, //front face
     //7,     ,3       , 4       ,
@@ -1141,8 +1110,8 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0, tubeSize = 0.01) {
   ];
 
   //TODO: fake data need to be fixed
-  var normalData = [];
-  normalData = [
+  //var normalData = [];
+  let normalData = [
     1.0, 0.0, 1.0, 1.0, 0.0, 0.0, //front face
     0.0, 1.0, 0.0, 0.0, 1.0, 1.0, //front face
     1.0, 0.0, 1.0, 1.0, 0.0, 0.0, //left face
@@ -1160,9 +1129,9 @@ function calcTubes(startPoint, endPoint, tubeNumb = 0, tubeSize = 0.01) {
 
   let distance = vec3.create();
   vec3.subtract(distance, vecEnd, vecStart);
-  x = distance[0] / points;
-  y = distance[1] / points;
-  z = distance[2] / points;
+  let x = distance[0] / points;
+  let y = distance[1] / points;
+  let z = distance[2] / points;
 
   //TODO: need to plot points in advance, the for loop dosent work :(
     for (let i=0; points > i; i++) {
